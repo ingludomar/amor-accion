@@ -1,0 +1,278 @@
+═══════════════════════════════════════════════════════════════
+    COMANDOS EXACTOS PARA DEPLOY - COPIAR Y PEGAR
+═══════════════════════════════════════════════════════════════
+
+📋 OPCIÓN 1: VERIFICAR REQUISITOS PRIMERO
+══════════════════════════════════════════════════════════════
+
+Copia y pega estos comandos en tu terminal UNO POR UNO:
+
+# 1. Ir al directorio del proyecto
+cd /Users/luisdominguez/attendance-system
+
+# 2. Ver archivos (verificar que estás en el lugar correcto)
+ls
+
+# 3. Verificar Docker instalado
+docker --version
+
+# 4. Verificar Docker Compose
+docker compose version
+
+# 5. Ejecutar script de verificación
+./check-ready.sh
+
+
+🚀 OPCIÓN 2: DEPLOY DIRECTO (SI YA TIENES DOCKER)
+══════════════════════════════════════════════════════════════
+
+# 1. Ir al proyecto
+cd /Users/luisdominguez/attendance-system
+
+# 2. Ejecutar deploy
+./deploy.sh
+
+# Esperar 2-3 minutos...
+# Deberías ver: "✓ Deploy completado exitosamente"
+
+
+✅ OPCIÓN 3: VERIFICAR QUE FUNCIONA
+══════════════════════════════════════════════════════════════
+
+# 1. Verificar health del backend
+curl http://localhost:8000/health
+
+# Deberías ver: {"status":"healthy",...}
+
+# 2. Ver logs en tiempo real
+docker compose logs -f
+
+# Para salir: Ctrl + C
+
+# 3. Ver estado de servicios
+docker compose ps
+
+# Todos deberían estar "Up"
+
+
+📱 OPCIÓN 4: ABRIR EN NAVEGADOR
+══════════════════════════════════════════════════════════════
+
+macOS - Copia y pega:
+open http://localhost:8000/docs
+
+Windows - Copia y pega en navegador:
+http://localhost:8000/docs
+
+Linux - Copia y pega:
+xdg-open http://localhost:8000/docs
+
+
+🔑 OPCIÓN 5: HACER LOGIN
+══════════════════════════════════════════════════════════════
+
+En http://localhost:8000/docs:
+
+1. Click en botón "Authorize" (candado verde arriba derecha)
+2. Ingresar:
+   username: admin@colegio.edu
+   password: changeme123
+3. Click "Authorize"
+4. Click "Close"
+
+
+🧪 OPCIÓN 6: PROBAR EL SISTEMA
+══════════════════════════════════════════════════════════════
+
+En http://localhost:8000/docs (después de hacer login):
+
+1. Buscar: GET /api/v1/campuses
+2. Click "Try it out"
+3. Click "Execute"
+4. Ver respuesta con "Sede Principal"
+
+
+🛠️  COMANDOS ÚTILES
+══════════════════════════════════════════════════════════════
+
+# Ver logs del backend
+docker compose logs -f backend
+
+# Ver logs de todos los servicios
+docker compose logs -f
+
+# Reiniciar un servicio
+docker compose restart backend
+
+# Reiniciar todo
+docker compose restart
+
+# Detener todo (mantiene datos)
+docker compose stop
+
+# Iniciar todo (después de stop)
+docker compose start
+
+# Ver estado de servicios
+docker compose ps
+
+# Detener y eliminar TODO (⚠️  borra datos)
+docker compose down -v
+
+
+🔧 SI HAY PROBLEMAS
+══════════════════════════════════════════════════════════════
+
+# Puerto 8000 ocupado - Ver qué proceso lo usa
+lsof -i :8000
+
+# Matar proceso que usa puerto 8000
+lsof -i :8000 | grep LISTEN | awk '{print $2}' | xargs kill -9
+
+# Puerto 5432 ocupado
+lsof -i :5432 | grep LISTEN | awk '{print $2}' | xargs kill -9
+
+# Puerto 5173 ocupado
+lsof -i :5173 | grep LISTEN | awk '{print $2}' | xargs kill -9
+
+# Limpiar Docker y empezar de nuevo
+docker compose down -v
+docker system prune -a -f
+./deploy.sh
+
+
+📦 GENERAR SECRET_KEY NUEVO
+══════════════════════════════════════════════════════════════
+
+# Generar clave aleatoria de 32 bytes
+openssl rand -hex 32
+
+# Copiar el resultado y pegarlo en .env en la línea SECRET_KEY=
+
+
+🌐 DEPLOY EN RENDER.COM (PRODUCCIÓN GRATIS)
+══════════════════════════════════════════════════════════════
+
+# 1. Inicializar Git (si no está)
+cd /Users/luisdominguez/attendance-system
+git init
+
+# 2. Agregar archivos
+git add .
+
+# 3. Hacer commit
+git commit -m "Initial commit - Sistema de Asistencia"
+
+# 4. Crear repo en GitHub:
+#    - Ir a: https://github.com/new
+#    - Nombre: attendance-system
+#    - Click "Create repository"
+
+# 5. Conectar y subir (reemplaza TU-USUARIO)
+git remote add origin https://github.com/TU-USUARIO/attendance-system.git
+git branch -M main
+git push -u origin main
+
+# 6. Seguir pasos en DEPLOY_AHORA.md sección "Deploy en Internet"
+
+
+🔍 VERIFICACIONES RÁPIDAS
+══════════════════════════════════════════════════════════════
+
+# Backend funcionando
+curl http://localhost:8000/health
+
+# Ver variables de entorno
+cat .env
+
+# Ver si Docker está corriendo
+docker info
+
+# Ver versión de Docker
+docker --version
+
+# Ver contenedores corriendo
+docker ps
+
+# Ver todas las imágenes
+docker images
+
+# Ver uso de recursos
+docker stats
+
+
+📊 INFORMACIÓN DEL SISTEMA
+══════════════════════════════════════════════════════════════
+
+URLs Locales:
+  API Docs:    http://localhost:8000/docs
+  Backend:     http://localhost:8000
+  Frontend:    http://localhost:5173
+  Health:      http://localhost:8000/health
+
+Credenciales:
+  Email:       admin@colegio.edu
+  Password:    changeme123
+
+Base de Datos:
+  Host:        localhost
+  Port:        5432
+  Database:    attendance_db
+  User:        postgres
+  Password:    (ver .env: DB_PASSWORD)
+
+
+📝 NOTAS IMPORTANTES
+══════════════════════════════════════════════════════════════
+
+1. Siempre ejecutar comandos desde:
+   /Users/luisdominguez/attendance-system
+
+2. Si ./deploy.sh falla:
+   - Verificar que Docker Desktop está corriendo
+   - Ejecutar: ./check-ready.sh
+   - Ver logs: docker compose logs -f
+
+3. Primera vez toma 2-3 minutos (descarga imágenes)
+
+4. Próximas veces toma 30-60 segundos
+
+5. Para detener: docker compose stop
+   Para reiniciar: docker compose start
+
+6. NO usar: docker-compose (con guión)
+   SÍ usar: docker compose (sin guión) - versión v2
+
+
+✅ CHECKLIST RÁPIDO
+══════════════════════════════════════════════════════════════
+
+□ Docker instalado y corriendo
+□ Navegado a /Users/luisdominguez/attendance-system
+□ Ejecutado: ./deploy.sh
+□ Visto mensaje: "Deploy completado exitosamente"
+□ Abierto: http://localhost:8000/docs
+□ Login exitoso con admin@colegio.edu
+□ Probado GET /api/v1/campuses
+□ Visto "Sede Principal" en respuesta
+
+
+🎯 PRÓXIMOS PASOS
+══════════════════════════════════════════════════════════════
+
+Después de deploy exitoso:
+
+1. Cambiar contraseña del admin
+2. Crear sedes adicionales
+3. Explorar todos los endpoints en /docs
+4. Leer PROJECT_STATUS.md para ver qué falta
+5. Decidir: ¿Producción o continuar desarrollo?
+
+
+═══════════════════════════════════════════════════════════════
+           ¡LISTO! Copia y pega los comandos 🚀
+═══════════════════════════════════════════════════════════════
+
+Empieza aquí:
+  cd /Users/luisdominguez/attendance-system
+  ./deploy.sh
