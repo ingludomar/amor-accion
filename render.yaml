@@ -1,0 +1,54 @@
+services:
+  - type: web
+    name: amoraccion-backend
+    runtime: python
+    plan: free
+    repo: https://github.com/ingludomar/amor-accion
+    branch: main
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: amoraccion-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 30
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: 7
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "False"
+      - key: API_V1_PREFIX
+        value: /api/v1
+      - key: VERSION
+        value: 1.0.0
+      - key: PROJECT_NAME
+        value: AmorAccion
+      - key: CORS_ORIGINS
+        value: '["https://amoraccion.vercel.app", "http://localhost:5173"]'
+
+  - type: web
+    name: amoraccion-frontend
+    runtime: static
+    plan: free
+    repo: https://github.com/ingludomar/amor-accion
+    branch: main
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://amoraccion-backend.onrender.com
+
+databases:
+  - name: amoraccion-db
+    plan: free
+    databaseName: amoraccion
+    user: amoraccion
