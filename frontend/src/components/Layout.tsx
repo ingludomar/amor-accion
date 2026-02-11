@@ -20,7 +20,7 @@ export default function Layout({ children }: LayoutProps) {
     navigate('/login');
   };
 
-  const navigation = [
+  const navigation: { name: string; href: string; icon: any; disabled?: boolean }[] = [
     { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
     { name: 'Sedes', href: '/campuses', icon: Building2 },
     { name: 'Usuarios', href: '/users', icon: Users },
@@ -54,7 +54,7 @@ export default function Layout({ children }: LayoutProps) {
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">{user?.full_name}</p>
-                <p className="text-xs text-gray-500">{user?.roles[0]}</p>
+                <p className="text-xs text-gray-500">{user?.role || 'Usuario'}</p>
               </div>
               <button
                 onClick={handleLogout}

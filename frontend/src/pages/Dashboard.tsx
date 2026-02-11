@@ -41,7 +41,7 @@ export default function Dashboard() {
       value: isLoading ? '...' : (campusCount || 0),
       icon: Building2,
       color: 'bg-blue-500',
-      change: `${user?.campuses.length || 0} asignadas a ti`,
+      change: `Sistema de asistencia`,
     },
     {
       name: 'Estudiantes',
@@ -80,16 +80,11 @@ export default function Dashboard() {
           <p className="text-gray-600">
             Resumen de tu sistema de gestión de asistencia
           </p>
-          <div className="mt-4 flex gap-3">
-            {user?.campuses.map((campus) => (
-              <span
-                key={campus.id}
-                className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium"
-              >
-                <Building2 className="w-4 h-4" />
-                {campus.name}
-              </span>
-            ))}
+          <div className="mt-4">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium">
+              <Building2 className="w-4 h-4" />
+              Sede Principal
+            </span>
           </div>
         </div>
 
@@ -183,12 +178,12 @@ export default function Dashboard() {
               <p className="text-2xl font-bold">70%</p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
-              <p className="text-sm text-indigo-100">Roles</p>
-              <p className="text-2xl font-bold">{user?.roles.length || 0}</p>
+              <p className="text-sm text-indigo-100">Rol</p>
+              <p className="text-2xl font-bold">{user?.role || 'Usuario'}</p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
-              <p className="text-sm text-indigo-100">Permisos</p>
-              <p className="text-2xl font-bold">{user?.permissions.length || 0}</p>
+              <p className="text-sm text-indigo-100">Estado</p>
+              <p className="text-2xl font-bold">{user?.is_active ? 'Activo' : 'Inactivo'}</p>
             </div>
           </div>
         </div>
