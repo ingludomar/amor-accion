@@ -1,19 +1,26 @@
 /**
- * Authentication state management with Zustand
+ * Authentication state management with Zustand + Supabase
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { User, LoginRequest, authAPI } from '../lib/api';
+import { supabase } from '../lib/supabase';
+
+interface User {
+  id: string;
+  email: string;
+  username?: string;
+  full_name?: string;
+  role?: string;
+}
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
 
-  login: (credentials: LoginRequest) => Promise<void>;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
   setUser: (user: User) => void;
   clearError: () => void;
 }
@@ -22,51 +29,57 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
-      accessToken: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
 
-      login: async (credentials: LoginRequest) => {
+      login: async (email: string, password: string) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await authAPI.login(credentials);
-          const { access_token, user } = response.data.data;
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
 
-          localStorage.setItem('access_token', access_token);
+          if (error) throw error;
+
+          // Get user profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
 
           set({
-            user,
-            accessToken: access_token,
+            user: {
+              id: data.user.id,
+              email: data.user.email!,
+              username: profile?.username,
+              full_name: profile?.full_name,
+              role: profile?.role,
+            },
             isAuthenticated: true,
             isLoading: false,
-            error: null,
           });
         } catch (error: any) {
-          const errorMessage = error.response?.data?.message || 'Error al iniciar sesión';
           set({
-            user: null,
-            accessToken: null,
-            isAuthenticated: false,
+            error: error.message || 'Error al iniciar sesión',
             isLoading: false,
-            error: errorMessage,
           });
-          throw error;
         }
       },
 
-      logout: () => {
-        localStorage.removeItem('access_token');
+      logout: async () => {
+        await supabase.auth.signOut();
         set({
           user: null,
-          accessToken: null,
           isAuthenticated: false,
           error: null,
         });
       },
 
       setUser: (user: User) => {
-        set({ user });
+        set({ user, isAuthenticated: true });
       },
 
       clearError: () => {
@@ -75,11 +88,6 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({
-        user: state.user,
-        accessToken: state.accessToken,
-        isAuthenticated: state.isAuthenticated,
-      }),
     }
   )
 );

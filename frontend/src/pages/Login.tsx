@@ -17,7 +17,7 @@ export default function Login() {
     clearError();
 
     try {
-      await login({ email, password });
+      await login(email, password);
       navigate('/dashboard');
     } catch (err) {
       // Error is handled in the store
