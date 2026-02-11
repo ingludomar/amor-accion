@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
@@ -10,28 +10,16 @@ import {
   AttendanceStatus,
   CreateSessionRequest,
   CreateAttendanceRequest,
-  AttendanceRecord,
-  AttendanceStats,
 } from '../lib/api';
 import {
   Calendar,
-  Clock,
   Users,
   Plus,
-  Search,
   X,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Play,
   Square,
   Trash2,
   BarChart3,
-  ChevronLeft,
-  ChevronRight,
   Home,
-  BookOpen,
-  GraduationCap,
 } from 'lucide-react';
 
 export default function Attendance() {
