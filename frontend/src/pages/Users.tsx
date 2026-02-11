@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
 import { userAPI, campusAPI, UserDetail, CreateUserRequest, UpdateUserRequest, Role, Campus } from '../lib/api';
-import { Users as UsersIcon, Plus, Pencil, Trash2, X, Mail, Phone, IdCard, Shield, AlertCircle, CheckCircle, Home, ChevronRight } from 'lucide-react';
+import { Users as UsersIcon, Plus, Pencil, Trash2, X, Mail, Phone, Shield, AlertCircle, CheckCircle, Home, ChevronRight } from 'lucide-react';
 
 export default function Users() {
   const navigate = useNavigate();
