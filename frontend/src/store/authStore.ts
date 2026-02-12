@@ -1,9 +1,14 @@
-/**
- * Authentication state management with Zustand + LocalStorage
- */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { auth, authAPI, User } from '../lib/localApi';
+import { supabase, signIn, signOut, getCurrentUser } from '../lib/supabaseClient';
+
+interface User {
+  id: string;
+  email: string;
+  username?: string;
+  full_name?: string;
+  role?: string;
+}
 
 interface AuthState {
   user: User | null;
@@ -12,14 +17,14 @@ interface AuthState {
   error: string | null;
 
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  setUser: (user: User) => void;
+  logout: () => Promise<void>;
+  checkAuth: () => Promise<void>;
   clearError: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       isAuthenticated: false,
       isLoading: false,
@@ -28,29 +33,31 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true, error: null });
         try {
-          const result = auth.login(email, password);
-          if (result.success) {
+          const { data, error } = await signIn(email, password);
+          
+          if (error) {
+            set({ error: error.message, isLoading: false });
+            return;
+          }
+
+          if (data.user) {
+            const user = await getCurrentUser();
             set({
-              user: result.user,
+              user: user as User,
               isAuthenticated: true,
               isLoading: false,
             });
-          } else {
-            set({
-              error: result.error || 'Error al iniciar sesión',
-              isLoading: false,
-            });
           }
-        } catch (error: any) {
+        } catch (err: any) {
           set({
-            error: error.message || 'Error al iniciar sesión',
+            error: err.message || 'Error al iniciar sesión',
             isLoading: false,
           });
         }
       },
 
-      logout: () => {
-        auth.logout();
+      logout: async () => {
+        await signOut();
         set({
           user: null,
           isAuthenticated: false,
@@ -58,8 +65,11 @@ export const useAuthStore = create<AuthState>()(
         });
       },
 
-      setUser: (user: User) => {
-        set({ user, isAuthenticated: true });
+      checkAuth: async () => {
+        const user = await getCurrentUser();
+        if (user) {
+          set({ user: user as User, isAuthenticated: true });
+        }
       },
 
       clearError: () => {
@@ -68,6 +78,10 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
+      partialize: (state) => ({ 
+        user: state.user, 
+        isAuthenticated: state.isAuthenticated 
+      }),
     }
   )
 );
