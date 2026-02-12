@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { supabase, signIn, signOut, getCurrentUser } from '../lib/supabaseClient';
+import { signIn, signOut, getCurrentUser } from '../lib/api';
 
 interface User {
   id: string;

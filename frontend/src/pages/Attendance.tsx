@@ -20,6 +20,7 @@ import {
   Trash2,
   BarChart3,
   Home,
+  ChevronRight,
 } from 'lucide-react';
 
 export default function Attendance() {
