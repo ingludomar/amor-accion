@@ -11,14 +11,16 @@
 
 ---
 
-### FASE 1: CONEXIÓN BÁSICA (PRIORIDAD ALTA)
+### FASE 1: CONEXIÓN BÁSICA (COMPLETADA) ✅
 **Objetivo:** Conectar frontend con Supabase y autenticación básica
 
-- [ ] Crear archivo `supabaseClient.ts` con configuración correcta
-- [ ] Actualizar `authStore.ts` para usar Supabase Auth
-- [ ] Actualizar `Login.tsx` (simplificar, solo email/password)
-- [ ] Actualizar `Dashboard.tsx` (mínimo, solo mostrar usuario logueado)
-- [ ] Testear: Login funciona y redirige a Dashboard
+- [x] Crear archivo `supabaseClient.ts` con configuración correcta
+- [x] Actualizar `authStore.ts` para usar Supabase Auth
+- [x] Actualizar `Login.tsx` (simplificar, solo email/password)
+- [x] Actualizar `Dashboard.tsx` (mínimo, solo mostrar usuario logueado)
+- [x] Testear: Login funciona y redirige a Dashboard
+
+**Estado:** Lista para testear en Vercel
 
 **Archivos a modificar:** 4
 **Tiempo estimado:** 30 min
