@@ -1,243 +1,284 @@
-# Sistema de Gestión de Asistencia Escolar Multi-Sede
+# 🎓 Amor Acción - Sistema de Asistencia
 
-Sistema web responsive para gestión de asistencia por clase/sesión, con control de roles, multi-sede, carnets digitales y reportería completa.
-
-## 📊 Estado del Proyecto
-
-**MVP Funcional - 70% Completo - Deployable ✅**
-
-### ✅ Implementado y Funcionando
-- **Autenticación completa** (JWT, roles, permisos)
-- **API de Sedes** (CRUD completo)
-- **Base de datos completa** (11 tablas relacionadas)
-- **Sistema multi-sede** funcional
-- **Docker containerización**
-- **API Documentation** interactiva (Swagger)
-- **Scripts de deploy** automatizados
-
-### 📝 En Desarrollo
-- Frontend React (estructura completa, pantallas pendientes)
-- API de Estudiantes
-- API de Asistencia
-- API de Reportes
-- Generación de PDFs/Carnets
-
-**Ver [`PROJECT_STATUS.md`](PROJECT_STATUS.md) para detalles completos**
-
-## Características del Sistema Completo
-
-- ✅ **Multi-sede** con permisos granulares por campus
-- ✅ **Gestión de estudiantes** y acudientes con relaciones familiares
-- ✅ **Toma de asistencia** por sesión de clase con auditoría completa
-- ⚠️ **Generación de carnets** con QR (estructura implementada)
-- ⚠️ **Reportes exportables** (CSV/PDF) (estructura implementada)
-- ✅ **Traslados** entre cursos y sedes (modelo implementado)
-- ✅ **Auditoría completa** de cambios (modelo implementado)
-- ✅ **100% Open Source** - Sin costos de licencias
-
-## Stack Tecnológico
-
-### Backend
-- **FastAPI** 0.109+ - Framework moderno y de alto rendimiento
-- **PostgreSQL** 16 - Base de datos robusta
-- **SQLAlchemy** 2.0 - ORM con soporte async
-- **Alembic** - Migraciones de base de datos
-- **JWT** - Autenticación segura con tokens
-- **WeasyPrint** - Generación de PDFs
-- **python-qrcode** - Generación de códigos QR
-
-### Frontend
-- **React** 18 - Librería UI moderna
-- **TypeScript** - Type safety end-to-end
-- **Vite** - Build tool ultrarrápido
-- **Tailwind CSS** - Utility-first CSS framework
-- **React Query** - Data fetching y cache
-- **Zustand** - State management ligero
-
-### Infraestructura
-- **Docker** & **Docker Compose** - Contenedorización
-- **Caddy** 2 - Reverse proxy con HTTPS automático
-
-## 🚀 Inicio Rápido - 2 Minutos
-
-### Requisitos
-- Docker 24+ instalado
-- 4GB RAM disponible
-
-### Instalación Automática
-
-```bash
-# 1. Navegar al proyecto
-cd attendance-system
-
-# 2. Ejecutar script de deploy
-./deploy.sh
-
-# 3. ¡Listo! El sistema está corriendo
-```
-
-El script automáticamente:
-- ✅ Verifica Docker
-- ✅ Configura variables de entorno
-- ✅ Inicia todos los servicios
-- ✅ Ejecuta migraciones
-- ✅ Crea datos iniciales
-- ✅ Verifica funcionamiento
-
-### Acceder al Sistema
-
-- **API Interactiva:** http://localhost:8000/docs ⭐ Empieza aquí
-- **Backend API:** http://localhost:8000
-- **Frontend:** http://localhost:5173
-
-### Credenciales por Defecto
-
-```
-Email:    admin@colegio.edu
-Password: changeme123
-```
-
-**⚠️ IMPORTANTE:** Cambiar contraseña después del primer login
-
-### Primeros Pasos
-
-1. Abrir http://localhost:8000/docs
-2. Click "Authorize" (candado arriba)
-3. Login con credenciales por defecto
-4. Probar endpoint `GET /api/v1/campuses`
-5. Crear una sede con `POST /api/v1/campuses`
-
-Ver [`GETTING_STARTED.md`](GETTING_STARTED.md) para guía completa.
-
-## Documentación
-
-- [Instalación Local](docs/INSTALLATION.md)
-- [Manual de Usuario](docs/USER_GUIDE.md)
-- [Manual de Administración](docs/ADMIN_GUIDE.md)
-- [Guía de Desarrollador](docs/DEVELOPER_GUIDE.md)
-- [Documentación API](docs/API.md)
-- [Guía de Despliegue](docs/DEPLOYMENT.md)
-- [Runbook de Operaciones](docs/RUNBOOK.md)
-- [Seguridad](docs/SECURITY.md)
-
-## Roles y Permisos
-
-- **SuperAdmin**: Acceso total al sistema, gestión de todas las sedes
-- **AdminSede**: Gestión completa de su(s) sede(s) asignada(s)
-- **Profesor**: Toma de asistencia en sus cursos, consulta de estudiantes
-- **Secretaría**: Registro de estudiantes, carnets, reportes con permisos limitados
-
-## Módulos Principales (MVP)
-
-### 1. Autenticación y Roles
-- Login con JWT (access + refresh tokens)
-- Control de acceso basado en roles (RBAC)
-- Gestión de usuarios y permisos
-
-### 2. Multi-Sede
-- Gestión de múltiples campus
-- Usuarios pueden estar asignados a una o más sedes
-- Filtrado automático por sede según permisos
-
-### 3. Estudiantes
-- CRUD completo con foto y datos personales
-- Edad calculada automáticamente desde fecha de nacimiento
-- Relaciones con múltiples acudientes/guardianes
-- Historial de matrículas y traslados
-
-### 4. Asistencia por Sesión
-- Creación manual de sesiones de clase
-- Toma de asistencia rápida (Presente/Ausente/Tarde/Excusado)
-- Cierre de sesión con validaciones
-- Ventana de edición configurable (default 24h)
-- Auditoría completa de cambios
-
-### 5. Carnets Digitales
-- Generación individual de carnets para estudiantes
-- QR con código inmutable del estudiante
-- Exportación a PDF listo para imprimir
-- Campos configurables
-
-### 6. Reportes Básicos
-- Por estudiante: historial de asistencia con porcentajes
-- Por curso: consolidado de asistencia
-- Exportación a CSV
-
-## Roadmap
-
-### ✅ MVP (Fase 1) - Actual
-- Backend FastAPI con autenticación JWT
-- Modelos de base de datos completos
-- API REST funcional
-- Frontend React con Tailwind
-- Docker Compose para desarrollo
-
-### 📋 Fase 2 (Próxima)
-- Importación masiva CSV
-- Traslados de estudiantes
-- Carnets masivos
-- Reportes avanzados con PDF
-- Plantillas configurables de carnets
-
-### 🔮 Fase 3 (Futura)
-- Portal para acudientes
-- Notificaciones por email
-- Generación automática de sesiones
-- Backups automáticos
-- Monitoreo y logs avanzados
-
-## Estructura del Proyecto
-
-```
-attendance-system/
-├── backend/              # FastAPI application
-│   ├── alembic/         # Database migrations
-│   ├── app/
-│   │   ├── api/v1/      # API endpoints
-│   │   ├── core/        # Config, security, database
-│   │   ├── models/      # SQLAlchemy models
-│   │   ├── schemas/     # Pydantic schemas
-│   │   ├── services/    # Business logic
-│   │   └── main.py      # FastAPI app
-│   └── requirements.txt
-├── frontend/            # React application
-│   ├── src/
-│   │   ├── api/        # API client
-│   │   ├── components/ # React components
-│   │   ├── pages/      # Page components
-│   │   └── stores/     # State management
-│   └── package.json
-├── infra/              # Infrastructure config
-│   ├── caddy/         # Reverse proxy
-│   └── postgres/      # DB init scripts
-├── docs/              # Documentation
-├── scripts/           # Utility scripts
-└── docker-compose.yml
-```
-
-## Contribuir
-
-1. Fork el repositorio
-2. Crear una rama: `git checkout -b feature/nueva-funcionalidad`
-3. Commit cambios: `git commit -m "feat: agregar nueva funcionalidad"`
-4. Push: `git push origin feature/nueva-funcionalidad`
-5. Abrir Pull Request
-
-## Licencia
-
-MIT License - Ver [LICENSE](LICENSE) para más detalles.
-
-## Soporte
-
-- **Issues**: Reportar bugs en [GitHub Issues]
-- **Email**: soporte@colegio.edu
-- **Documentación**: Ver carpeta `docs/`
-
-## Agradecimientos
-
-Desarrollado con ❤️ usando tecnologías open source.
+> **Sistema de gestión de asistencia estudiantil para organizaciones sin fines de lucro.**  
+> **Desarrollado con arquitectura multi-agente para garantizar calidad y escalabilidad.**
 
 ---
 
-**Versión:** 1.0.0 MVP
-**Última actualización:** 2024-01-22
+## ⚡ EMPIEZA AQUÍ (2 minutos)
+
+### 👋 ¿Primera vez?
+→ Lee **[ONBOARDING.md](./ONBOARDING.md)** (10 minutos de lectura, 0 confusiones)
+
+### 🎯 ¿Qué se está trabajando AHORA?
+→ Ve **[STATUS.md](./STATUS.md)** (Estado actual en 2 minutos)
+
+### 🤖 ¿Cuál es tu rol?
+→ Lee **[docs/02-architecture/AGENTS.md](./docs/02-architecture/AGENTS.md)**
+
+### 🔄 ¿Cómo funciona el proceso?
+→ Lee **[docs/02-architecture/WORKFLOW.md](./docs/02-architecture/WORKFLOW.md)**
+
+---
+
+## 📊 Estado del Proyecto
+
+```
+┌────────────────────────────────────────────────────┐
+│  FASE 1: Configuración Inicial                     │
+│  Progreso: [████░░░░░░░░░░░░░░░░░░] 15%           │
+│  Estado: 🔄 En desarrollo                          │
+│                                                     │
+│  Última actualización: 17 Feb 2026                 │
+│  Feature activo: Gestión de Sedes (FEATURE-001)    │
+└────────────────────────────────────────────────────┘
+```
+
+**Ver detalles completos en [STATUS.md](./STATUS.md)**
+
+---
+
+## 🚀 Sistema Multi-Agente
+
+Este proyecto utiliza un workflow de **5 agentes especializados** que trabajan en secuencia para garantizar calidad en cada feature:
+
+```
+Feature Request
+      ↓
+🏗️ AGENT-ARCHITECT (Diseña)
+      ↓
+💻 AGENT-DEVELOPER (Codifica)
+      ↓
+🧪 AGENT-TESTER (Testea >80% cobertura)
+      ↓
+🔍 AGENT-REVIEWER (Revisa)
+      ↓
+🔄 AGENT-INTEGRATOR (Deploya)
+      ↓
+   ✅ PRODUCCIÓN
+```
+
+**Reglas de Oro:**
+1. ✅ **NO saltar agentes** - Cada uno completa su checklist
+2. ✅ **Checkpoints obligatorios** - Documentación requerida
+3. ✅ **Handoffs estructurados** - Continuidad garantizada
+4. ✅ **CI/CD automatizado** - Validación en cada etapa
+
+---
+
+## 📁 Estructura del Proyecto
+
+```
+AttendanceSystem/
+│
+├─ 📊 STATUS.md                    ← VER ESTO PRIMERO
+├─ 📖 ONBOARDING.md                ← Guía para nuevos agentes
+├─ 🚀 README.md                    ← Este archivo
+│
+├─ 📚 docs/                        ← Documentación completa
+│  ├─ 01-overview/                 📊 Visión general
+│  │  ├─ PROJECT-GUIDE.md          Guía completa del proyecto
+│  │  └─ PLANIFICADOR.md           Plan de desarrollo
+│  ├─ 02-architecture/             🏗️ Arquitectura
+│  │  ├─ AGENTS.md                 Roles de agentes
+│  │  ├─ WORKFLOW.md               Proceso de trabajo
+│  │  └─ CHECKLIST-MIGRACION.md    Verificación migración
+│  ├─ 03-features/                 🎯 Features activos
+│  │  └─ FEATURE-001-gestion-sedes.md
+│  ├─ 04-guides/                   📖 Guías
+│  ├─ 05-sessions/                 📝 Handoffs
+│  │  └─ HANDOFF-TEMPLATE.md
+│  └─ 06-references/               📎 Referencias
+│     └─ DEPURACION.md
+│
+├─ 💻 frontend/                    ← Código fuente
+│  ├─ src/
+│  │  ├─ pages/                    Páginas de la app
+│  │  ├─ components/               Componentes reutilizables
+│  │  ├─ lib/                      APIs y utilidades
+│  │  ├─ store/                    Estado global (Zustand)
+│  │  └─ test/                     Tests (Vitest)
+│  ├─ package.json
+│  └─ ...
+│
+├─ 🗄️ database/                    ← SQL y esquemas
+├─ 🤖 .github/workflows/           ← CI/CD
+└─ ⚙️ .opencode/                   ← Configuración
+```
+
+---
+
+## 🛠️ Stack Tecnológico
+
+| Capa | Tecnología |
+|------|-----------|
+| **Frontend** | React 18 + TypeScript + Vite |
+| **Estilos** | Tailwind CSS |
+| **Estado** | Zustand |
+| **Testing** | Vitest + React Testing Library |
+| **Backend** | Supabase (PostgreSQL + Auth + Storage) |
+| **Deploy** | Vercel |
+| **CI/CD** | GitHub Actions |
+
+---
+
+## 🚀 Iniciar el Proyecto
+
+### Requisitos
+- Node.js 20+
+- Git
+
+### Instalación (3 minutos)
+
+```bash
+# 1. Clonar
+git clone <tu-repo>
+cd AttendanceSystem
+
+# 2. Instalar
+cd frontend
+npm install
+
+# 3. Configurar variables
+cp .env.example .env
+# Editar .env con tus credenciales Supabase
+
+# 4. Iniciar
+npm run dev
+
+# 5. Abrir http://localhost:5173
+```
+
+### Credenciales de Prueba
+```
+Email: admin@amoraccion.com
+Password: A1morA2ccion
+```
+
+---
+
+## 📖 Documentación
+
+### Documentación Esencial (Leer en orden)
+
+1. **[STATUS.md](./STATUS.md)** - Estado actual del proyecto
+2. **[ONBOARDING.md](./ONBOARDING.md)** - Guía para nuevos agentes
+3. **[docs/PLANIFICADOR.md](./docs/01-overview/PLANIFICADOR.md)** - Plan completo
+4. **[docs/AGENTS.md](./docs/02-architecture/AGENTS.md)** - Roles y responsabilidades
+5. **[docs/WORKFLOW.md](./docs/02-architecture/WORKFLOW.md)** - Proceso de trabajo
+
+### Features en Desarrollo
+
+- **[FEATURE-001: Gestión de Sedes](./docs/03-features/FEATURE-001-gestion-sedes.md)** - 📋 Listo para desarrollo
+
+### Guías de Referencia Rápida
+
+| Guía | Descripción |
+|------|-------------|
+| [AGENTS.md](./docs/02-architecture/AGENTS.md) | Roles de los 5 agentes |
+| [WORKFLOW.md](./docs/02-architecture/WORKFLOW.md) | Proceso paso a paso |
+| [CHECKLIST-MIGRACION.md](./docs/02-architecture/CHECKLIST-MIGRACION.md) | Verificación de migración |
+
+---
+
+## ⚡ Comandos Útiles
+
+```bash
+# Desarrollo
+cd frontend && npm run dev        # Iniciar desarrollo
+npm run build                     # Build producción
+npm run lint                      # Verificar estilo
+
+# Testing
+npm test                          # Ejecutar tests
+npm run test:coverage             # Tests con cobertura
+
+# Git
+git checkout -b feature/XXX       # Nueva feature
+git checkout develop              # Cambiar a develop
+```
+
+---
+
+## 🎯 Roadmap
+
+### Fase 1: Configuración (Actual - 15%)
+- [x] Sistema multi-agente
+- [x] Autenticación
+- [ ] Gestión de Sedes ← **EN PROGRESO**
+
+### Fase 2: Funcionalidades Básicas (0%)
+- [ ] Años Escolares
+- [ ] Estudiantes
+- [ ] Acudientes
+
+### Fase 3: Personalización (0%)
+- [ ] Settings
+- [ ] Logo organización
+
+### Fase 4: Asistencia (0%)
+- [ ] Grupos
+- [ ] Toma de asistencia
+- [ ] Reportes
+
+### Fase 5: Testing (0%)
+- [ ] Tests E2E
+- [ ] Testing con usuarios
+
+### Fase 6: Producción (0%)
+- [ ] Deploy Vercel
+- [ ] Configuración producción
+
+**Ver plan completo en [PLANIFICADOR.md](./docs/01-overview/PLANIFICADOR.md)**
+
+---
+
+## 🤝 Contribuir
+
+### Para Agregar un Feature
+
+1. **Architect** crea especificación en `docs/03-features/`
+2. **Developer** implementa en branch `feature/XXX`
+3. **Tester** agrega tests (cobertura >80%)
+4. **Reviewer** aprueba el PR
+5. **Integrator** hace merge y deploy
+
+### Handoffs de Sesión
+
+Si no completas tu trabajo:
+1. Usa el template en `docs/05-sessions/HANDOFF-TEMPLATE.md`
+2. Guarda en `docs/05-sessions/YYYY-MM-DD-handoff-descripcion.md`
+3. Actualiza `STATUS.md`
+
+---
+
+## 🐛 Problemas Conocidos
+
+Ver [STATUS.md](./STATUS.md) sección "Problemas Conocidos" para lista actualizada.
+
+---
+
+## 📞 Soporte
+
+- **Duda general:** Leer STATUS.md primero
+- **Duda de rol:** Consultar AGENTS.md
+- **Duda de proceso:** Consultar WORKFLOW.md
+- **Bug:** Crear issue en GitHub
+
+---
+
+## 📄 Licencia
+
+MIT - Libre uso para proyectos sociales
+
+---
+
+**Desarrollado con ❤️ para Amor Acción y organizaciones similares**
+
+**Versión:** 1.0.0-alpha  
+**Última actualización:** Febrero 2026  
+**Sistema multi-agente:** ✅ Activo
+
+---
+
+> 💡 **Tip:** Guarda `STATUS.md` en tus favoritos. Es tu mapa del proyecto.

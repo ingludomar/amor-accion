@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
-import { campusAPI, Campus, CreateCampusRequest } from '../lib/api';
+import { campusAPI, Campus } from '../lib/supabaseApi';
 import { Building2, Plus, Pencil, Trash2, X, MapPin, Phone, Mail, Home, ChevronRight } from 'lucide-react';
 
 export default function Campuses() {
@@ -13,7 +13,7 @@ export default function Campuses() {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCampus, setEditingCampus] = useState<Campus | null>(null);
-  const [formData, setFormData] = useState<CreateCampusRequest>({
+  const [formData, setFormData] = useState<Partial<Campus>>({
     name: '',
     code: '',
     address: '',
@@ -28,8 +28,8 @@ export default function Campuses() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['campuses'],
     queryFn: async () => {
-      const response = await campusAPI.getAll();
-      return response.data.data;
+      const { data } = await campusAPI.getAll();
+      return data;
     },
   });
 
@@ -47,8 +47,13 @@ export default function Campuses() {
     mutationFn: ({ id, data }: { id: string; data: any }) =>
       campusAPI.update(id, data),
     onSuccess: () => {
+      console.log('Update successful, closing modal');
       queryClient.invalidateQueries({ queryKey: ['campuses'] });
       closeModal();
+    },
+    onError: (error: any) => {
+      console.error('Update failed:', error);
+      alert('Error al actualizar la sede: ' + (error.message || 'Error desconocido'));
     },
   });
 
@@ -79,10 +84,10 @@ export default function Campuses() {
     setFormData({
       name: campus.name,
       code: campus.code,
-      address: '',
+      address: campus.address || '',
       city: campus.city || '',
-      phone: '',
-      email: '',
+      phone: campus.phone || '',
+      email: campus.email || '',
       is_active: campus.is_active,
       logo_url: campus.logo_url || '',
     });
@@ -102,7 +107,10 @@ export default function Campuses() {
         id: editingCampus.id,
         data: {
           name: formData.name,
+          address: formData.address,
           city: formData.city,
+          phone: formData.phone,
+          email: formData.email,
           is_active: formData.is_active,
           logo_url: formData.logo_url,
         },
@@ -179,14 +187,14 @@ export default function Campuses() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Total de Sedes</p>
-              <p className="text-3xl font-bold text-gray-900">{data?.total || 0}</p>
+              <p className="text-3xl font-bold text-gray-900">{data?.length || 0}</p>
             </div>
           </div>
         </div>
 
         {/* Campuses Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {data?.items.map((campus) => (
+          {data?.map((campus) => (
             <div
               key={campus.id}
               className="bg-white rounded-lg shadow-sm border-2 border-gray-100 hover:border-indigo-200 transition p-6"
@@ -239,7 +247,7 @@ export default function Campuses() {
         </div>
 
         {/* Empty State */}
-        {data?.items.length === 0 && (
+        {data?.length === 0 && (
           <div className="bg-white rounded-lg shadow-sm p-12 text-center">
             <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -394,7 +402,7 @@ export default function Campuses() {
                   placeholder="https://ejemplo.com/logo.png"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Pega aquí la URL de la imagen del logo (Imgur, Google Drive, etc.)
+                  Pega aquí la URL de la imagen del logo (Imgur, Google Drive, etc.
                 </p>
               </div>
 
