@@ -157,6 +157,20 @@ Password: A1morA2ccion
 
 ---
 
+## 🌐 Versión en Producción
+
+**Aplicación deployada y funcionando:**
+
+🔗 **URL:** https://frontend-1to1ghb2h-ingludomars-projects.vercel.app
+
+**Features activos en producción:**
+- ✅ Autenticación de usuarios
+- ✅ Gestión de Sedes (CRUD completo)
+
+**Último deploy:** 17 Feb 2026 - FEATURE-001: Gestión de Sedes
+
+---
+
 ## 📖 Documentación
 
 ### Documentación Esencial (Leer en orden)

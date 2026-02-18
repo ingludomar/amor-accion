@@ -134,28 +134,33 @@ FASE 6: [░░░░░░░░░░░░░░░░░░░░] 0%
 ## 🔥 FEATURES ACTIVOS
 
 ### FEATURE-001: Gestión de Sedes 🏫
-**Estado:** 🟡 En testing - CRUD validado  
-**Agente asignado:** Architect → Developer → Tester  
+**Estado:** 🟢 En producción - CRUD validado y deployado  
+**Agente asignado:** Architect → Developer → Tester → Integrator  
 **Prioridad:** Alta  
 **Documentación:** `docs/features/FEATURE-001-gestion-sedes.md`
 
 **Descripción:**
 CRUD completo de sedes/campus donde se impartirán las clases.
 
-**Progreso:** 62% completado
+**Progreso:** 62% completado | **DEPLOYADO** ✅
 - ✅ CREATE: Funcionando correctamente
 - ✅ READ: Lista y visualización OK
 - ✅ UPDATE: Edición con persistencia de datos OK
 - ✅ DELETE: Eliminación con confirmación OK
+- ✅ DEPLOY: Aplicación en producción
 - ⏳ Edge Cases: Pendiente
 - ⏳ UI/UX Responsive: Pendiente
+
+**URLs de Producción:**
+- 🌐 **Principal:** https://frontend-1to1ghb2h-ingludomars-projects.vercel.app
+- 🌐 **Alias:** https://frontend-two-beta-60.vercel.app
 
 **Checklist:**
 - [x] Architect: Especificación completa
 - [x] Developer: CRUD implementado
 - [x] Tester: CRUD validado (62%)
+- [x] Integrator: Deploy a producción ✅
 - [ ] Reviewer: En espera
-- [ ] Integrator: En espera
 
 ---
 
