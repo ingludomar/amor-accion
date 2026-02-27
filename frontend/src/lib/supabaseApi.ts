@@ -48,7 +48,11 @@ export interface Guardian {
   full_name: string;
   document_type?: string;
   document_number?: string;
-  phone?: string;
+  phone_home?: string;
+  phone_mobile?: string;
+  whatsapp_phone?: string;
+  has_whatsapp?: boolean;
+  whatsapp_note?: string;
   email?: string;
   address?: string;
   occupation?: string;
@@ -67,6 +71,50 @@ export interface GuardianRelationship {
   notes?: string;
   guardian?: Guardian;
 }
+
+// ============================================
+// FAMILIES API - Feature-004
+// ============================================
+
+export interface Family {
+  id: string;
+  name?: string;
+  address?: string;
+  phone?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  students?: Student[];
+  guardians?: GuardianWithFamily[];
+}
+
+export interface GuardianWithFamily extends Guardian {
+  guardian_families?: {
+    relationship_type: string;
+    is_primary: boolean;
+  };
+}
+
+export interface StudentFamily {
+  id: string;
+  student_id: string;
+  family_id: string;
+  relationship_type: string;
+}
+
+export interface GuardianFamily {
+  id: string;
+  guardian_id: string;
+  family_id: string;
+  relationship_type: string;
+  is_primary: boolean;
+}
+
+export type CreateFamilyRequest = Omit<Family, 'id' | 'created_at' | 'updated_at' | 'students' | 'guardians'>;
+export type UpdateFamilyRequest = Partial<CreateFamilyRequest>;
+
+export type CreateGuardianRequest = Omit<Guardian, 'id' | 'full_name'>;
+export type UpdateGuardianRequest = Partial<CreateGuardianRequest>;
 
 // ============================================
 // SCHOOL YEARS API
@@ -463,6 +511,192 @@ export const guardianAPI = {
 };
 
 // ============================================
+// FAMILIES API - Feature-004
+// ============================================
+
+export const familyAPI = {
+  getAll: async (search?: string) => {
+    let query = supabase
+      .from('families')
+      .select('*')
+      .order('name');
+    
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    return { data: data || [], error: null };
+  },
+
+  getById: async (id: string) => {
+    const { data: family, error: familyError } = await supabase
+      .from('families')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (familyError) throw familyError;
+    
+    // Obtener estudiantes de la familia
+    const { data: studentFamilies } = await supabase
+      .from('student_families')
+      .select('*, student:students(*)')
+      .eq('family_id', id);
+    
+    // Obtener guardianes de la familia
+    const { data: guardianFamilies } = await supabase
+      .from('guardian_families')
+      .select('*, guardian:guardians(*)')
+      .eq('family_id', id);
+    
+    return { 
+      data: {
+        ...family,
+        students: studentFamilies?.map(sf => sf.student).filter(Boolean) || [],
+        guardians: guardianFamilies?.map(gf => ({
+          ...gf.guardian,
+          guardian_families: {
+            relationship_type: gf.relationship_type,
+            is_primary: gf.is_primary
+          }
+        })) || []
+      }, 
+      error: null 
+    };
+  },
+
+  create: async (family: CreateFamilyRequest) => {
+    const { data, error } = await supabase
+      .from('families')
+      .insert(family)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data, error: null };
+  },
+
+  update: async (id: string, family: UpdateFamilyRequest) => {
+    const { data, error } = await supabase
+      .from('families')
+      .update({ ...family, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data, error: null };
+  },
+
+  delete: async (id: string) => {
+    const { error } = await supabase
+      .from('families')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return { error };
+  },
+
+  // Asignar estudiante a familia
+  assignStudent: async (studentId: string, familyId: string, relationshipType: string = 'hijo') => {
+    const { data, error } = await supabase
+      .from('student_families')
+      .insert({ student_id: studentId, family_id: familyId, relationship_type: relationshipType })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data, error: null };
+  },
+
+  // Desasignar estudiante de familia
+  unassignStudent: async (studentId: string, familyId: string) => {
+    const { error } = await supabase
+      .from('student_families')
+      .delete()
+      .eq('student_id', studentId)
+      .eq('family_id', familyId);
+    
+    if (error) throw error;
+    return { error };
+  },
+
+  // Asignar guardián a familia
+  assignGuardian: async (
+    guardianId: string, 
+    familyId: string, 
+    relationshipType: string, 
+    isPrimary: boolean = false
+  ) => {
+    const { data, error } = await supabase
+      .from('guardian_families')
+      .insert({ 
+        guardian_id: guardianId, 
+        family_id: familyId, 
+        relationship_type: relationshipType,
+        is_primary: isPrimary
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data, error: null };
+  },
+
+  // Desasignar guardián de familia
+  unassignGuardian: async (guardianId: string, familyId: string) => {
+    const { error } = await supabase
+      .from('guardian_families')
+      .delete()
+      .eq('guardian_id', guardianId)
+      .eq('family_id', familyId);
+    
+    if (error) throw error;
+    return { error };
+  },
+
+  // Obtener familias de un estudiante
+  getByStudent: async (studentId: string) => {
+    const { data, error } = await supabase
+      .from('student_families')
+      .select('*, family:families(*)')
+      .eq('student_id', studentId);
+    
+    if (error) throw error;
+    return { data: data || [], error: null };
+  },
+
+  // Obtener estudiantes sin familia (para asignar)
+  getUnassignedStudents: async (excludeFamilyId?: string) => {
+    let query = supabase
+      .from('students')
+      .select('id, student_code, first_name, last_name, full_name')
+      .eq('is_active', true);
+    
+    if (excludeFamilyId) {
+      const { data: assignedIds } = await supabase
+        .from('student_families')
+        .select('student_id')
+        .eq('family_id', excludeFamilyId);
+      
+      if (assignedIds && assignedIds.length > 0) {
+        const ids = assignedIds.map(i => i.student_id);
+        query = query.not('id', 'in', `(${ids.join(',')})`);
+      }
+    }
+    
+    const { data, error } = await query.order('full_name');
+    
+    if (error) throw error;
+    return { data: data || [], error: null };
+  },
+};
+
+// ============================================
 // ATTENDANCE API
 // ============================================
 
@@ -577,6 +811,8 @@ export interface UserDetail {
   email: string;
   username?: string;
   full_name?: string;
+  document_number?: string;
+  phone?: string;
   role: string;
   is_active: boolean;
   created_at: string;
@@ -592,9 +828,7 @@ export interface CreateUserRequest {
   document_number?: string;
   phone?: string;
   role_ids?: string[];
-  campus_ids?: string[];
-  is_teacher?: boolean;
-  teacher_code?: string;
+  campus_id?: string; // Solo un campus, no array
 }
 
 export interface UpdateUserRequest {
@@ -605,10 +839,8 @@ export interface UpdateUserRequest {
   document_number?: string;
   phone?: string;
   role_ids?: string[];
-  campus_ids?: string[];
+  campus_id?: string; // Solo un campus
   is_active?: boolean;
-  is_teacher?: boolean;
-  teacher_code?: string;
 }
 
 export const userAPI = {
@@ -656,29 +888,63 @@ export const userAPI = {
   },
 
   create: async (userData: CreateUserRequest) => {
-    // First create auth user
+    // Crear usuario con signUp y confirmación automática
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: userData.email,
       password: userData.password,
+      options: {
+        data: {
+          full_name: userData.full_name,
+          username: userData.username,
+        }
+      }
     });
     
-    if (authError) throw authError;
-    if (!authData.user) throw new Error('No user created');
+    // Verificar si hubo error
+    if (authError) {
+      console.error('Error creating auth user:', authError);
+      throw new Error('Error al crear usuario: ' + authError.message);
+    }
+    
+    // Verificar que se creó el usuario
+    if (!authData.user) {
+      throw new Error('No se pudo crear el usuario');
+    }
 
-    // Then create profile
+    // Si el usuario ya existe (signIn con mismo email), obtenerlo
+    let userId = authData.user.id;
+    
+    // Si no hay usuario pero tampoco error, puede que ya exista
+    if (!userId && authData.session) {
+      const { data: userData } = await supabase.auth.getUser();
+      userId = userData.user?.id;
+    }
+    
+    if (!userId) {
+      throw new Error('No se pudo obtener el ID del usuario');
+    }
+
+    // Crear perfil asociado
     const { data, error } = await supabase
       .from('profiles')
-      .insert({
-        id: authData.user.id,
+      .upsert({
+        id: userId,
         email: userData.email,
         username: userData.username,
         full_name: userData.full_name,
+        document_number: userData.document_number,
+        phone: userData.phone,
         role: userData.role_ids?.[0] || 'user',
+        campus_id: userData.campus_id,
       })
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error creando perfil:', error);
+      throw new Error('Error al crear el perfil del usuario: ' + error.message);
+    }
+    
     return { data, error: null };
   },
 
@@ -689,7 +955,10 @@ export const userAPI = {
         email: userData.email,
         username: userData.username,
         full_name: userData.full_name,
+        document_number: userData.document_number,
+        phone: userData.phone,
         role: userData.role_ids?.[0],
+        campus_id: userData.campus_id,
         is_active: userData.is_active,
       })
       .eq('id', id)
@@ -720,6 +989,7 @@ export default {
   campusAPI,
   studentAPI,
   guardianAPI,
+  familyAPI,
   attendanceAPI,
   userAPI,
 };

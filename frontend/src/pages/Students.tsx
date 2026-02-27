@@ -1,58 +1,90 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { AlertCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  studentAPI,
-  campusAPI,
-  Student,
-  CreateStudentRequest,
-  UpdateStudentRequest,
-  GuardianCreate,
-  GuardianSearchResult,
-  Gender,
-  RelationshipType
-} from '../lib/api';
-import { Plus, Search, Edit2, Trash2, X, AlertCircle, CheckCircle, UserPlus, UserMinus, Users as UsersIcon, Home, ChevronRight, CreditCard } from 'lucide-react';
-import StudentIDCard from '../components/StudentIDCard';
+import Layout from '../components/Layout';
+import { studentAPI, campusAPI, familyAPI, guardianAPI, Student, CreateStudentRequest, Guardian, Family } from '../lib/supabaseApi';
+import { 
+  Plus, 
+  Search, 
+  Edit2, 
+  Trash2, 
+  X, 
+  UserPlus,
+  GraduationCap,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  FamilyRestroom,
+  UserCheck,
+  MessageCircle,
+  Trash,
+  PlusCircle
+} from 'lucide-react';
 
 export default function Students() {
-  const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCampus, setSelectedCampus] = useState<string>('');
-  const [isActiveFilter, setIsActiveFilter] = useState<boolean | undefined>(true);
-  const [page, setPage] = useState(1);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  // TEST: Auto-open modal on first render if there are students
+  useEffect(() => {
+    // Simular click después de 2 segundos si hay estudiantes
+    const timer = setTimeout(() => {
+      console.log('Students page loaded - checking for students');
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCampus, setSelectedCampus] = useState<string>('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Fetch students
-  const { data: studentsResponse, isLoading } = useQuery({
-    queryKey: ['students', page, selectedCampus, isActiveFilter, searchTerm],
+  const { data: students = [], isLoading } = useQuery({
+    queryKey: ['students', selectedCampus, searchTerm],
     queryFn: async () => {
-      const response = await studentAPI.getAll({
-        skip: (page - 1) * 10,
-        limit: 10,
+      const { data } = await studentAPI.getAll({
         campus_id: selectedCampus || undefined,
-        is_active: isActiveFilter,
+        is_active: true,
         search: searchTerm || undefined,
       });
-      return response.data;
+      return data;
     },
   });
 
-  // Fetch campuses for filter
-  const { data: campusesResponse } = useQuery({
+  // Fetch campuses
+  const { data: campuses = [] } = useQuery({
     queryKey: ['campuses'],
     queryFn: async () => {
-      const response = await campusAPI.getAll({ skip: 0, limit: 100 });
-      return response.data;
+      const { data } = await campusAPI.getAll();
+      return data;
     },
   });
 
-  // Create student mutation
+  // Fetch families
+  const { data: families = [] } = useQuery({
+    queryKey: ['families'],
+    queryFn: async () => {
+      const { data } = await familyAPI.getAll();
+      return data;
+    },
+  });
+
+  // Fetch guardians
+  const { data: guardians = [] } = useQuery({
+    queryKey: ['guardians'],
+    queryFn: async () => {
+      const { data } = await guardianAPI.getAll();
+      return data;
+    },
+  });
+
+  // Pagination
+  const totalStudents = students.length;
+  const totalPages = Math.ceil(totalStudents / itemsPerPage);
+  const paginatedStudents = students.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
+  // Create mutation
   const createMutation = useMutation({
     mutationFn: (data: CreateStudentRequest) => studentAPI.create(data),
     onSuccess: () => {
@@ -61,1502 +93,640 @@ export default function Students() {
       alert('Estudiante creado exitosamente');
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || 'Error al crear estudiante';
-      alert(message);
+      alert(error.message || 'Error al crear estudiante');
     },
   });
 
-  // Update student mutation
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateStudentRequest }) =>
-      studentAPI.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['students'] });
-      setShowEditModal(false);
-      setSelectedStudent(null);
-      alert('Estudiante actualizado exitosamente');
-    },
-    onError: (error: any) => {
-      const message = error.response?.data?.message || 'Error al actualizar estudiante';
-      alert(message);
-    },
-  });
-
-  // Delete student mutation
+  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (id: string) => studentAPI.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
-      alert('Estudiante desactivado exitosamente');
+      alert('Estudiante eliminado exitosamente');
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || 'Error al desactivar estudiante';
-      alert(message);
+      alert(error.message || 'Error al eliminar estudiante');
     },
   });
 
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => studentAPI.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      setShowCreateModal(false);
+      setEditingStudent(null);
+      alert('Estudiante actualizado exitosamente');
+    },
+    onError: (error: any) => {
+      alert(error.message || 'Error al actualizar estudiante');
+    },
+  });
+
+  const handleEdit = (student: Student) => {
+    // Abrir modal directamente
+    setEditingStudent(student);
+    setShowCreateModal(true);
+  };
+
   const handleDelete = (student: Student) => {
-    if (window.confirm(`¿Está seguro de desactivar al estudiante ${student.full_name}?`)) {
+    if (window.confirm(`¿Está seguro de eliminar a ${student.full_name}?`)) {
       deleteMutation.mutate(student.id);
     }
   };
 
-  const handleViewDetails = async (student: Student) => {
-    try {
-      const response = await studentAPI.getById(student.id);
-      setSelectedStudent(response.data.data);
-      setShowDetailsModal(true);
-    } catch (error: any) {
-      alert('Error al cargar detalles del estudiante');
-    }
-  };
-
-  const handleEdit = async (student: Student) => {
-    try {
-      // Cargar datos completos del estudiante incluyendo acudientes
-      const response = await studentAPI.getById(student.id);
-      setSelectedStudent(response.data.data);
-      setShowEditModal(true);
-    } catch (error: any) {
-      alert('Error al cargar datos del estudiante');
-    }
-  };
-
-  const students = studentsResponse?.data?.items || [];
-  const totalPages = studentsResponse?.data?.total_pages || 1;
-
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb Navigation */}
-      <div className="flex items-center gap-2 text-sm text-gray-600">
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-1 hover:text-blue-600 transition"
-        >
-          <Home size={16} />
-          Dashboard
-        </button>
-        <ChevronRight size={16} className="text-gray-400" />
-        <span className="text-gray-900 font-medium">Estudiantes</span>
-      </div>
-
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestión de Estudiantes</h1>
-          <p className="text-sm text-gray-600 mt-1">Administra los estudiantes del sistema</p>
-        </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-        >
-          <Plus size={20} />
-          Nuevo Estudiante
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Buscar
-            </label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Nombre, código o documento..."
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Sede
-            </label>
-            <select
-              value={selectedCampus}
-              onChange={(e) => setSelectedCampus(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Todas las sedes</option>
-              {campusesResponse?.data?.items.map((campus) => (
-                <option key={campus.id} value={campus.id}>
-                  {campus.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Estado
-            </label>
-            <select
-              value={isActiveFilter === undefined ? '' : isActiveFilter ? 'true' : 'false'}
-              onChange={(e) => setIsActiveFilter(e.target.value === '' ? undefined : e.target.value === 'true')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Todos</option>
-              <option value="true">Activos</option>
-              <option value="false">Inactivos</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Students Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        {isLoading ? (
-          <div className="p-8 text-center text-gray-500">Cargando...</div>
-        ) : students.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">No se encontraron estudiantes</div>
-        ) : (
-          <>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Documento</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Edad</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sede</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acudientes</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {students.map((student) => (
-                  <tr key={student.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {student.student_code}
-                    </td>
-                    <td
-                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 cursor-pointer hover:text-blue-600"
-                      onClick={() => handleViewDetails(student)}
-                    >
-                      {student.full_name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {student.document_number || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {student.age} años
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {student.campus_name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {student.guardians?.length || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        student.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {student.is_active ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEdit(student)}
-                          className="text-blue-600 hover:text-blue-800"
-                          title="Editar estudiante"
-                        >
-                          <Edit2 size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(student)}
-                          className="text-red-600 hover:text-red-800"
-                          title="Desactivar estudiante"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* Pagination */}
-            <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200">
-              <div className="text-sm text-gray-700">
-                Página {page} de {totalPages}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Anterior
-                </button>
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Siguiente
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Create Modal */}
-      {showCreateModal && (
-        <CreateStudentModal
-          campuses={campusesResponse?.data?.items || []}
-          onClose={() => setShowCreateModal(false)}
-          onSubmit={(data) => createMutation.mutate(data)}
-        />
-      )}
-
-      {/* Edit Modal */}
-      {showEditModal && selectedStudent && (
-        <EditStudentModal
-          student={selectedStudent}
-          campuses={campusesResponse?.data?.items || []}
-          onClose={() => {
-            setShowEditModal(false);
-            setSelectedStudent(null);
-          }}
-          onSubmit={(data) => updateMutation.mutate({ id: selectedStudent.id, data })}
-        />
-      )}
-
-      {/* Details Modal */}
-      {showDetailsModal && selectedStudent && (
-        <StudentDetailsModal
-          student={selectedStudent}
-          onClose={() => {
-            setShowDetailsModal(false);
-            setSelectedStudent(null);
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-// Guardian with Relationship Info (for the list)
-interface GuardianWithRelationship extends GuardianCreate {
-  id?: string;
-  existing?: boolean;
-}
-
-// Create Student Modal Component
-function CreateStudentModal({
-  campuses,
-  onClose,
-  onSubmit,
-}: {
-  campuses: any[];
-  onClose: () => void;
-  onSubmit: (data: CreateStudentRequest) => void;
-}) {
-  const [formData, setFormData] = useState<CreateStudentRequest>({
-    first_name: '',
-    last_name: '',
-    birth_date: '',
-    gender: Gender.MALE,
-    campus_id: '',
-    guardians: [],
-  });
-
-  const [guardians, setGuardians] = useState<GuardianWithRelationship[]>([]);
-  const [showGuardianSelector, setShowGuardianSelector] = useState(false);
-
-  const [validationErrors, setValidationErrors] = useState({
-    first_name: '',
-    last_name: '',
-    birth_date: '',
-    campus_id: '',
-  });
-
-  const validateForm = (): boolean => {
-    const errors = {
-      first_name: '',
-      last_name: '',
-      birth_date: '',
-      campus_id: '',
-    };
-
-    if (!formData.first_name || formData.first_name.length < 2) {
-      errors.first_name = 'El nombre debe tener al menos 2 caracteres';
-    }
-    if (!formData.last_name || formData.last_name.length < 2) {
-      errors.last_name = 'El apellido debe tener al menos 2 caracteres';
-    }
-    if (!formData.birth_date) {
-      errors.birth_date = 'La fecha de nacimiento es requerida';
-    }
-    if (!formData.campus_id) {
-      errors.campus_id = 'Debe seleccionar una sede';
-    }
-
-    setValidationErrors(errors);
-    return !Object.values(errors).some(error => error !== '');
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (validateForm()) {
-      // Filter out the extra properties before sending
-      const cleanGuardians = guardians.map(g => {
-        const { id, existing, ...guardianData } = g;
-        return guardianData;
-      });
-      onSubmit({ ...formData, guardians: cleanGuardians });
-    }
-  };
-
-  const addGuardian = (guardian: GuardianWithRelationship) => {
-    setGuardians([...guardians, guardian]);
-    setShowGuardianSelector(false);
-  };
-
-  const removeGuardian = (index: number) => {
-    setGuardians(guardians.filter((_, i) => i !== index));
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-      <div className="bg-white rounded-lg w-full max-w-4xl m-4 max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Sticky Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Crear Estudiante</h2>
-            <p className="text-sm text-gray-500 mt-1">Complete el formulario para registrar un nuevo estudiante</p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
-            >
-              <X size={18} />
-              Cerrar
-            </button>
+    <Layout>
+      <div className="space-y-6 test-container-v2">
+        {/* Header */}
+        <div className="page-header">
+          <div className="relative">
+            <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
+              <GraduationCap className="w-8 h-8" />
+              Gestión de Estudiantes
+            </h1>
+            <p className="text-blue-100">
+              Administra los estudiantes matriculados en el sistema
+            </p>
           </div>
         </div>
 
-        {/* Scrollable Content */}
-        <div className="overflow-y-auto p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Validation Requirements */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-blue-900 mb-2">Campos Requeridos:</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Nombres y apellidos (mínimo 2 caracteres cada uno)</li>
-              <li>• Fecha de nacimiento</li>
-              <li>• Sede</li>
-            </ul>
-            {guardians.length === 0 && (
-              <div className="mt-2 text-sm text-yellow-800 bg-yellow-50 border border-yellow-200 rounded p-2">
-                <strong>Nota:</strong> Se recomienda agregar al menos un acudiente. Puede buscarlo si ya existe en el sistema (ej: hermanos) o crear uno nuevo.
-              </div>
-            )}
-          </div>
-
-          {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nombres *
-              </label>
-              <div className="relative">
+        {/* Filters & Actions */}
+        <div className="card p-6">
+          <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+            <div className="flex flex-col sm:flex-row gap-4 flex-1 w-full md:w-auto">
+              {/* Search */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="text"
-                  value={formData.first_name}
-                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                    validationErrors.first_name
-                      ? 'border-red-500 bg-red-50'
-                      : formData.first_name.length >= 2
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-300'
-                  }`}
+                  placeholder="Buscar estudiante..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="input-field pl-10"
                 />
-                {validationErrors.first_name && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <AlertCircle size={20} className="text-red-500" />
-                  </div>
-                )}
-                {formData.first_name.length >= 2 && !validationErrors.first_name && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <CheckCircle size={20} className="text-green-500" />
-                  </div>
-                )}
               </div>
-              {validationErrors.first_name && (
-                <p className="mt-1 text-sm text-red-600">{validationErrors.first_name}</p>
-              )}
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Apellidos *
-              </label>
+              {/* Campus Filter */}
               <div className="relative">
-                <input
-                  type="text"
-                  value={formData.last_name}
-                  onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                    validationErrors.last_name
-                      ? 'border-red-500 bg-red-50'
-                      : formData.last_name.length >= 2
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-300'
-                  }`}
-                />
-                {validationErrors.last_name && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <AlertCircle size={20} className="text-red-500" />
-                  </div>
-                )}
-                {formData.last_name.length >= 2 && !validationErrors.last_name && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <CheckCircle size={20} className="text-green-500" />
-                  </div>
-                )}
-              </div>
-              {validationErrors.last_name && (
-                <p className="mt-1 text-sm text-red-600">{validationErrors.last_name}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo de Documento
-              </label>
-              <select
-                value={formData.document_type || ''}
-                onChange={(e) => setFormData({ ...formData, document_type: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Seleccionar</option>
-                <option value="RC">Registro Civil</option>
-                <option value="TI">Tarjeta de Identidad</option>
-                <option value="CC">Cédula de Ciudadanía</option>
-                <option value="CE">Cédula de Extranjería</option>
-                <option value="PAS">Pasaporte</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Número de Documento
-              </label>
-              <input
-                type="text"
-                value={formData.document_number || ''}
-                onChange={(e) => setFormData({ ...formData, document_number: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha de Nacimiento *
-              </label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={formData.birth_date}
-                  onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                    validationErrors.birth_date
-                      ? 'border-red-500 bg-red-50'
-                      : formData.birth_date
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-300'
-                  }`}
-                />
-                {validationErrors.birth_date && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <AlertCircle size={20} className="text-red-500" />
-                  </div>
-                )}
-                {formData.birth_date && !validationErrors.birth_date && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <CheckCircle size={20} className="text-green-500" />
-                  </div>
-                )}
-              </div>
-              {validationErrors.birth_date && (
-                <p className="mt-1 text-sm text-red-600">{validationErrors.birth_date}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Género *
-              </label>
-              <select
-                value={formData.gender}
-                onChange={(e) => setFormData({ ...formData, gender: e.target.value as Gender })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value={Gender.MALE}>Masculino</option>
-                <option value={Gender.FEMALE}>Femenino</option>
-                <option value={Gender.OTHER}>Otro</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Grupo Sanguíneo
-              </label>
-              <select
-                value={formData.blood_type || ''}
-                onChange={(e) => setFormData({ ...formData, blood_type: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Seleccionar</option>
-                <option value="A+">A+</option>
-                <option value="A-">A-</option>
-                <option value="B+">B+</option>
-                <option value="B-">B-</option>
-                <option value="AB+">AB+</option>
-                <option value="AB-">AB-</option>
-                <option value="O+">O+</option>
-                <option value="O-">O-</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Sede *
-              </label>
-              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <select
-                  value={formData.campus_id}
-                  onChange={(e) => setFormData({ ...formData, campus_id: e.target.value })}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                    validationErrors.campus_id
-                      ? 'border-red-500 bg-red-50'
-                      : formData.campus_id
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-300'
-                  }`}
+                  value={selectedCampus}
+                  onChange={(e) => setSelectedCampus(e.target.value)}
+                  className="input-field pl-10 pr-8 appearance-none cursor-pointer"
                 >
-                  <option value="">Seleccionar sede</option>
+                  <option value="">Todas las sedes</option>
                   {campuses.map((campus) => (
                     <option key={campus.id} value={campus.id}>
                       {campus.name}
                     </option>
                   ))}
                 </select>
-                {validationErrors.campus_id && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <AlertCircle size={20} className="text-red-500" />
-                  </div>
-                )}
-                {formData.campus_id && !validationErrors.campus_id && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <CheckCircle size={20} className="text-green-500" />
-                  </div>
-                )}
               </div>
-              {validationErrors.campus_id && (
-                <p className="mt-1 text-sm text-red-600">{validationErrors.campus_id}</p>
-              )}
+            </div>
+
+            {/* Add Button */}
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="btn-primary whitespace-nowrap"
+            >
+              <Plus className="w-5 h-5" />
+              Nuevo Estudiante
+            </button>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="stat-card">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <GraduationCap className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Estudiantes</p>
+                <p className="text-2xl font-bold text-gray-900">{totalStudents}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="stat-card">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-emerald-100 rounded-xl">
+                <UserPlus className="w-6 h-6 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Página Actual</p>
+                <p className="text-2xl font-bold text-gray-900">{page} de {totalPages || 1}</p>
+              </div>
             </div>
           </div>
 
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Alergias
-            </label>
-            <textarea
-              value={formData.allergies || ''}
-              onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
-              rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Ingrese alergias conocidas si las hay..."
-            />
+          <div className="stat-card">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-violet-100 rounded-xl">
+                <Filter className="w-6 h-6 text-violet-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Mostrando</p>
+                <p className="text-2xl font-bold text-gray-900">{paginatedStudents.length}</p>
+              </div>
+            </div>
           </div>
+        </div>
 
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              URL de Foto del Estudiante
-            </label>
-            <input
-              type="url"
-              value={formData.photo_url || ''}
-              onChange={(e) => setFormData({ ...formData, photo_url: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="https://ejemplo.com/foto.jpg"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Pega aquí la URL de una imagen alojada en internet (Imgur, Google Drive, etc.)
-            </p>
-          </div>
-
-          {/* Guardians Section */}
-          <div className="border-t pt-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">
-                Acudientes {guardians.length > 0 && `(${guardians.length})`}
+        {/* Students Table */}
+        <div className="card overflow-hidden">
+          {isLoading ? (
+            <div className="p-12 text-center">
+              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-gray-600">Cargando estudiantes...</p>
+            </div>
+          ) : paginatedStudents.length === 0 ? (
+            <div className="p-12 text-center">
+              <GraduationCap className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No hay estudiantes registrados
               </h3>
+              <p className="text-gray-600 mb-6">
+                Comienza agregando tu primer estudiante al sistema
+              </p>
               <button
-                type="button"
-                onClick={() => setShowGuardianSelector(true)}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
+                onClick={() => setShowCreateModal(true)}
+                className="btn-primary"
               >
-                <UserPlus size={18} />
-                Agregar Acudiente
+                <Plus className="w-5 h-5" />
+                Agregar Estudiante
               </button>
             </div>
-
-            {guardians.length > 0 ? (
-              <div className="space-y-3">
-                {guardians.map((guardian, index) => (
-                  <div key={index} className={`border rounded-lg p-4 ${guardian.existing ? 'bg-purple-50 border-purple-200' : 'bg-green-50 border-green-200'}`}>
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-gray-900">
-                            {guardian.first_name} {guardian.last_name}
-                          </p>
-                          {guardian.existing && (
-                            <span className="px-2 py-0.5 bg-purple-600 text-white text-xs rounded-full flex items-center gap-1">
-                              <UsersIcon size={12} />
-                              Existente
-                            </span>
-                          )}
-                          {guardian.is_primary && (
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
-                              Principal
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {guardian.relationship_type}
-                          {guardian.phone && ` • ${guardian.phone}`}
-                          {guardian.email && ` • ${guardian.email}`}
-                        </p>
-                        {guardian.document_number && (
-                          <p className="text-sm text-gray-500">
-                            Doc: {guardian.document_type} {guardian.document_number}
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeGuardian(index)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <UserMinus size={18} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                <UsersIcon size={48} className="mx-auto text-gray-400 mb-2" />
-                <p className="text-gray-500">No hay acudientes agregados</p>
-                <p className="text-sm text-gray-400 mt-1">Haga clic en "Agregar Acudiente" para buscar uno existente o crear uno nuevo</p>
-              </div>
-            )}
-
-            {showGuardianSelector && (
-              <GuardianSelector
-                onSelectExisting={(guardian) => addGuardian({ ...guardian, existing: true })}
-                onCreateNew={(guardian) => addGuardian({ ...guardian, existing: false })}
-                onCancel={() => setShowGuardianSelector(false)}
-                isPrimary={guardians.length === 0}
-              />
-            )}
-          </div>
-
-        </form>
-        </div>
-
-        {/* Sticky Footer */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-between items-center">
-          <div className="text-sm text-gray-500">
-            Los campos marcados con * son obligatorios
-          </div>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const form = document.querySelector('form');
-                if (form) {
-                  const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-                  form.dispatchEvent(submitEvent);
-                }
-              }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-            >
-              Crear Estudiante
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Guardian Selector Component - Search existing or create new
-function GuardianSelector({
-  onSelectExisting,
-  onCreateNew,
-  onCancel,
-  isPrimary,
-}: {
-  onSelectExisting: (guardian: GuardianWithRelationship) => void;
-  onCreateNew: (guardian: GuardianCreate) => void;
-  onCancel: () => void;
-  isPrimary: boolean;
-}) {
-  const [mode, setMode] = useState<'search' | 'create'>('search');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<GuardianSearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [selectedGuardian, setSelectedGuardian] = useState<GuardianSearchResult | null>(null);
-
-  // Relationship data for selected guardian
-  const [relationshipData, setRelationshipData] = useState({
-    relationship_type: RelationshipType.ACUDIENTE,
-    is_primary: isPrimary,
-    is_authorized_pickup: true,
-    lives_with: true,
-    notes: '',
-  });
-
-  const handleSearch = async () => {
-    if (!searchTerm.trim()) {
-      alert('Ingrese un nombre o número de documento para buscar');
-      return;
-    }
-
-    setIsSearching(true);
-    try {
-      const response = await studentAPI.searchGuardians({ search: searchTerm });
-      setSearchResults(response.data.data.items);
-      if (response.data.data.items.length === 0) {
-        alert('No se encontraron acudientes. Puede crear uno nuevo.');
-      }
-    } catch (error) {
-      alert('Error al buscar acudientes');
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const handleSelectExisting = () => {
-    if (!selectedGuardian) {
-      alert('Seleccione un acudiente');
-      return;
-    }
-
-    onSelectExisting({
-      first_name: selectedGuardian.first_name,
-      last_name: selectedGuardian.last_name,
-      document_type: selectedGuardian.document_type,
-      document_number: selectedGuardian.document_number,
-      phone: selectedGuardian.phone,
-      email: selectedGuardian.email,
-      address: selectedGuardian.address,
-      occupation: selectedGuardian.occupation,
-      ...relationshipData,
-      id: selectedGuardian.id,
-    });
-  };
-
-  return (
-    <div className="mt-4 border-2 border-purple-300 rounded-lg p-4 bg-purple-50">
-      <div className="flex items-center justify-between mb-4">
-        <h4 className="font-medium text-gray-900">Agregar Acudiente</h4>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setMode('search')}
-            className={`px-3 py-1 rounded-lg text-sm ${mode === 'search' ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 border border-gray-300'}`}
-          >
-            Buscar Existente
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('create')}
-            className={`px-3 py-1 rounded-lg text-sm ${mode === 'create' ? 'bg-green-600 text-white' : 'bg-white text-gray-700 border border-gray-300'}`}
-          >
-            Crear Nuevo
-          </button>
-        </div>
-      </div>
-
-      {mode === 'search' ? (
-        <div className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-800">
-            <strong>Tip:</strong> Si el acudiente ya está registrado (ej: hermanos que comparten el mismo acudiente), puede buscarlo aquí por nombre o documento.
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Nombre o número de documento..."
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-            />
-            <button
-              type="button"
-              onClick={handleSearch}
-              disabled={isSearching}
-              className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50"
-            >
-              {isSearching ? 'Buscando...' : 'Buscar'}
-            </button>
-          </div>
-
-          {searchResults.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-700">Resultados ({searchResults.length}):</p>
-              <div className="max-h-60 overflow-y-auto space-y-2">
-                {searchResults.map((guardian) => (
-                  <div
-                    key={guardian.id}
-                    onClick={() => setSelectedGuardian(guardian)}
-                    className={`p-3 border-2 rounded-lg cursor-pointer transition ${
-                      selectedGuardian?.id === guardian.id
-                        ? 'border-purple-600 bg-purple-100'
-                        : 'border-gray-200 bg-white hover:border-purple-300'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium text-gray-900">{guardian.full_name}</p>
-                        <p className="text-sm text-gray-600">
-                          {guardian.document_type} {guardian.document_number}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {guardian.phone} • {guardian.email}
-                        </p>
-                      </div>
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                        {guardian.student_count} estudiante(s)
-                      </span>
-                    </div>
-                  </div>
-                ))}
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Código
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Nombre
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Documento
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Sede
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Estado
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {paginatedStudents.map((student: Student) => (
+                      <tr key={student.id} className="hover:bg-gray-50/50 transition">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm font-mono text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                            {student.student_code}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                              {student.first_name?.[0]}{student.last_name?.[0]}
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {student.full_name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {student.email || 'Sin email'}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {student.document_number || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {campuses.find(c => c.id === student.campus_id)?.name || 'Sin sede'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            student.is_active 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {student.is_active ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleEdit(student)}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                              title="Editar"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(student)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
 
-              {selectedGuardian && (
-                <div className="bg-white border border-gray-300 rounded-lg p-4 space-y-3">
-                  <h5 className="font-medium text-gray-900">Configurar Relación</h5>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Parentesco
-                    </label>
-                    <select
-                      value={relationshipData.relationship_type}
-                      onChange={(e) => setRelationshipData({ ...relationshipData, relationship_type: e.target.value as RelationshipType })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                  <p className="text-sm text-gray-600">
+                    Mostrando {(page - 1) * itemsPerPage + 1} a {Math.min(page * itemsPerPage, totalStudents)} de {totalStudents} estudiantes
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <option value={RelationshipType.PADRE}>Padre</option>
-                      <option value={RelationshipType.MADRE}>Madre</option>
-                      <option value={RelationshipType.ACUDIENTE}>Acudiente</option>
-                      <option value={RelationshipType.OTRO}>Otro</option>
-                    </select>
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <span className="text-sm font-medium text-gray-900">
+                      Página {page} de {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages}
+                      className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
                   </div>
-
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={relationshipData.is_primary}
-                        onChange={(e) => setRelationshipData({ ...relationshipData, is_primary: e.target.checked })}
-                        disabled={isPrimary}
-                        className="rounded"
-                      />
-                      <span className="text-sm text-gray-700">Acudiente Principal</span>
-                    </label>
-
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={relationshipData.is_authorized_pickup}
-                        onChange={(e) => setRelationshipData({ ...relationshipData, is_authorized_pickup: e.target.checked })}
-                        className="rounded"
-                      />
-                      <span className="text-sm text-gray-700">Autorizado para recoger</span>
-                    </label>
-
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={relationshipData.lives_with}
-                        onChange={(e) => setRelationshipData({ ...relationshipData, lives_with: e.target.checked })}
-                        className="rounded"
-                      />
-                      <span className="text-sm text-gray-700">Vive con el estudiante</span>
-                    </label>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Notas (opcional)
-                    </label>
-                    <textarea
-                      value={relationshipData.notes}
-                      onChange={(e) => setRelationshipData({ ...relationshipData, notes: e.target.value })}
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                      placeholder="Información adicional..."
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleSelectExisting}
-                    className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
-                  >
-                    Usar Este Acudiente
-                  </button>
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
-      ) : (
-        <GuardianCreateForm
-          onSubmit={onCreateNew}
-          isPrimary={isPrimary}
+      </div>
+
+      {/* Create/Edit Modal - ConFamilia y Acudientes */}
+      {showCreateModal && (
+        <CreateStudentModal
+          campuses={campuses}
+          families={families}
+          guardians={guardians}
+          editingStudent={editingStudent}
+          onClose={() => {
+            setShowCreateModal(false);
+            setEditingStudent(null);
+          }}
+          onSubmit={(data) => {
+            if (editingStudent) {
+              updateMutation.mutate({ id: editingStudent.id, data });
+            } else {
+              createMutation.mutate(data);
+            }
+          }}
         />
       )}
-
-      <div className="flex justify-end mt-4">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-        >
-          Cancelar
-        </button>
-      </div>
-    </div>
+    </Layout>
   );
 }
 
-// Guardian Create Form Component
-function GuardianCreateForm({
-  onSubmit,
-  isPrimary,
-}: {
-  onSubmit: (guardian: GuardianCreate) => void;
-  isPrimary: boolean;
+// Modal completo para crear/editar estudiante con Familia y Acudientes
+function CreateStudentModal({ 
+  campuses, 
+  families,
+  guardians,
+  editingStudent,
+  onClose, 
+  onSubmit 
+}: { 
+  campuses: any[];
+  families: Family[];
+  guardians: Guardian[];
+  editingStudent?: Student | null;
+  onClose: () => void; 
+  onSubmit: (data: CreateStudentRequest, familyId?: string, guardianIds?: string[]) => void;
 }) {
-  const [formData, setFormData] = useState<GuardianCreate>({
+  const [activeTab, setActiveTab] = useState<'basic' | 'family'>('basic');
+  const [formData, setFormData] = useState<CreateStudentRequest>({
+    first_name: editingStudent?.first_name || '',
+    last_name: editingStudent?.last_name || '',
+    birth_date: editingStudent?.birth_date || '',
+    gender: editingStudent?.gender as any || 'male',
+    campus_id: editingStudent?.campus_id || campuses[0]?.id || '',
+    document_type: editingStudent?.document_type || '',
+    document_number: editingStudent?.document_number || '',
+    blood_type: editingStudent?.blood_type || '',
+    allergies: editingStudent?.allergies || '',
+    email: editingStudent?.email || '',
+    phone: editingStudent?.phone || '',
+    address: editingStudent?.address || '',
+    photo_url: editingStudent?.photo_url || '',
+    is_active: editingStudent?.is_active ?? true,
+  });
+
+  // Estado para familia
+  const [selectedFamilyId, setSelectedFamilyId] = useState<string>('');
+  const [newFamilyName, setNewFamilyName] = useState('');
+  const [showNewFamily, setShowNewFamily] = useState(false);
+
+  // Estado para nuevos acudientes
+  const [selectedGuardianIds, setSelectedGuardianIds] = useState<string[]>([]);
+  const [showNewGuardian, setShowNewGuardian] = useState(false);
+  const [newGuardian, setNewGuardian] = useState({
     first_name: '',
     last_name: '',
-    phone: '',
+    phone_mobile: '',
+    has_whatsapp: false,
+    whatsapp_phone: '',
     email: '',
-    relationship_type: RelationshipType.ACUDIENTE,
-    is_primary: isPrimary,
-    is_authorized_pickup: true,
-    lives_with: true,
+    relationship: 'padre',
   });
 
-  const handleSubmit = () => {
-    if (formData.first_name && formData.last_name && formData.phone) {
-      onSubmit(formData);
-    } else {
-      alert('Por favor complete los campos requeridos: nombres, apellidos y teléfono');
+  // Cargar datos existentes si es edición
+  useEffect(() => {
+    if (editingStudent) {
+      setFormData({
+        first_name: editingStudent.first_name || '',
+        last_name: editingStudent.last_name || '',
+        birth_date: editingStudent.birth_date || '',
+        gender: editingStudent.gender as any || 'male',
+        campus_id: editingStudent.campus_id || campuses[0]?.id || '',
+        document_type: editingStudent.document_type || '',
+        document_number: editingStudent.document_number || '',
+        blood_type: editingStudent.blood_type || '',
+        allergies: editingStudent.allergies || '',
+        email: editingStudent.email || '',
+        phone: editingStudent.phone || '',
+        address: editingStudent.address || '',
+        photo_url: editingStudent.photo_url || '',
+        is_active: editingStudent.is_active ?? true,
+      });
+
+      // Cargar familia si existe
+      if ((editingStudent as any).family_id) {
+        setSelectedFamilyId((editingStudent as any).family_id);
+      }
+
+      // Cargar guardianes si existen
+      if (editingStudent.guardians && editingStudent.guardians.length > 0) {
+        setSelectedGuardianIds(editingStudent.guardians.map(g => g.id));
+      }
     }
-  };
+  }, [editingStudent, campuses]);
 
-  return (
-    <div className="space-y-4 bg-white rounded-lg p-4 border border-gray-300">
-      <h5 className="font-medium text-gray-900">Crear Nuevo Acudiente</h5>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Nombres *
-          </label>
-          <input
-            type="text"
-            value={formData.first_name}
-            onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Apellidos *
-          </label>
-          <input
-            type="text"
-            value={formData.last_name}
-            onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Tipo de Documento
-          </label>
-          <select
-            value={formData.document_type || ''}
-            onChange={(e) => setFormData({ ...formData, document_type: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-          >
-            <option value="">Seleccionar</option>
-            <option value="CC">Cédula de Ciudadanía</option>
-            <option value="CE">Cédula de Extranjería</option>
-            <option value="PAS">Pasaporte</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Número de Documento
-          </label>
-          <input
-            type="text"
-            value={formData.document_number || ''}
-            onChange={(e) => setFormData({ ...formData, document_number: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-            placeholder="Si ingresa documento, el sistema lo reutilizará"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Teléfono *
-          </label>
-          <input
-            type="tel"
-            value={formData.phone || ''}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Email
-          </label>
-          <input
-            type="email"
-            value={formData.email || ''}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Parentesco *
-          </label>
-          <select
-            value={formData.relationship_type}
-            onChange={(e) => setFormData({ ...formData, relationship_type: e.target.value as RelationshipType })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-          >
-            <option value={RelationshipType.PADRE}>Padre</option>
-            <option value={RelationshipType.MADRE}>Madre</option>
-            <option value={RelationshipType.ACUDIENTE}>Acudiente</option>
-            <option value={RelationshipType.OTRO}>Otro</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Ocupación
-          </label>
-          <input
-            type="text"
-            value={formData.occupation || ''}
-            onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Dirección
-        </label>
-        <input
-          type="text"
-          value={formData.address || ''}
-          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-        />
-      </div>
-
-      <div className="flex gap-4 flex-wrap">
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={formData.is_primary}
-            onChange={(e) => setFormData({ ...formData, is_primary: e.target.checked })}
-            disabled={isPrimary}
-            className="rounded"
-          />
-          <span className="text-sm text-gray-700">Acudiente Principal</span>
-        </label>
-
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={formData.is_authorized_pickup}
-            onChange={(e) => setFormData({ ...formData, is_authorized_pickup: e.target.checked })}
-            className="rounded"
-          />
-          <span className="text-sm text-gray-700">Autorizado para recoger</span>
-        </label>
-
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={formData.lives_with}
-            onChange={(e) => setFormData({ ...formData, lives_with: e.target.checked })}
-            className="rounded"
-          />
-          <span className="text-sm text-gray-700">Vive con el estudiante</span>
-        </label>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Notas
-        </label>
-        <textarea
-          value={formData.notes || ''}
-          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-          rows={2}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-        />
-      </div>
-
-      <button
-        type="button"
-        onClick={handleSubmit}
-        className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-      >
-        Crear y Agregar Acudiente
-      </button>
-    </div>
-  );
-}
-
-// Edit Student Modal Component - Con gestión de acudientes
-function EditStudentModal({
-  student,
-  campuses,
-  onClose,
-  onSubmit,
-}: {
-  student: Student;
-  campuses: any[];
-  onClose: () => void;
-  onSubmit: (data: UpdateStudentRequest) => void;
-}) {
-  const [formData, setFormData] = useState<any>({
-    first_name: student.first_name,
-    last_name: student.last_name,
-    document_type: student.document_type,
-    document_number: student.document_number,
-    birth_date: student.birth_date,
-    gender: student.gender as Gender,
-    blood_type: student.blood_type,
-    allergies: student.allergies,
-    email: student.email,
-    phone: student.phone,
-    address: student.address,
-    campus_id: student.campus_id,
-    is_active: student.is_active,
-  });
-
-  const [guardians, setGuardians] = useState<Guardian[]>(student.guardians || []);
-  const [showGuardianSelector, setShowGuardianSelector] = useState(false);
-  const [isAddingGuardian, setIsAddingGuardian] = useState(false);
-  const [editingGuardianId, setEditingGuardianId] = useState<string | null>(null);
-  const [editingGuardianData, setEditingGuardianData] = useState<any>(null);
-  const [showIDCard, setShowIDCard] = useState(false);
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    let familyId = selectedFamilyId;
 
-    // Asegurar que todos los campos estén incluidos
-    const updateData: any = {
-      first_name: formData.first_name,
-      last_name: formData.last_name,
-      document_type: formData.document_type,
-      document_number: formData.document_number,
-      birth_date: formData.birth_date,
-      gender: formData.gender,
-      blood_type: formData.blood_type,
-      allergies: formData.allergies, // Asegurar que se incluyan las alergias
-      email: formData.email,
-      phone: formData.phone,
-      address: formData.address, // Asegurar que se incluya la dirección
-      campus_id: formData.campus_id, // Incluir el campus/sede
-      is_active: formData.is_active,
-    };
-
-    onSubmit(updateData);
-  };
-
-  const handleAddGuardian = async (guardian: GuardianWithRelationship) => {
-    setIsAddingGuardian(true);
-    try {
-      // Preparar datos del acudiente
-      const guardianData: any = {
-        first_name: guardian.first_name,
-        last_name: guardian.last_name,
-        relationship_type: guardian.relationship_type,
-        is_primary: guardian.is_primary,
-        is_authorized_pickup: guardian.is_authorized_pickup !== undefined ? guardian.is_authorized_pickup : true,
-        lives_with: guardian.lives_with !== undefined ? guardian.lives_with : true,
-      };
-
-      // Agregar campos opcionales solo si existen
-      if (guardian.document_type) guardianData.document_type = guardian.document_type;
-      if (guardian.document_number) guardianData.document_number = guardian.document_number;
-      if (guardian.phone) guardianData.phone = guardian.phone;
-      if (guardian.email) guardianData.email = guardian.email;
-      if (guardian.address) guardianData.address = guardian.address;
-      if (guardian.occupation) guardianData.occupation = guardian.occupation;
-      if (guardian.notes) guardianData.notes = guardian.notes;
-
-      await studentAPI.addGuardian(student.id, guardianData);
-
-      // Recargar los datos del estudiante
-      const response = await studentAPI.getById(student.id);
-      setGuardians(response.data.data.guardians);
-      setShowGuardianSelector(false);
-      alert('Acudiente agregado exitosamente');
-    } catch (error: any) {
-      console.error('Error al agregar acudiente:', error);
-      const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'Error al agregar acudiente';
-      alert(errorMessage);
-    } finally {
-      setIsAddingGuardian(false);
-    }
-  };
-
-  const handleRemoveGuardian = async (guardianId: string) => {
-    if (!confirm('¿Está seguro de eliminar este acudiente del estudiante?')) {
-      return;
+    // Crear nueva familia si es necesario
+    if (showNewFamily && newFamilyName.trim()) {
+      try {
+        const { data: newFamily } = await familyAPI.create({
+          name: newFamilyName,
+          is_active: true,
+        });
+        familyId = newFamily.id;
+      } catch (error) {
+        alert('Error al crear familia');
+        return;
+      }
     }
 
-    try {
-      await studentAPI.removeGuardian(student.id, guardianId);
-      setGuardians(guardians.filter(g => g.id !== guardianId));
-      alert('Acudiente eliminado exitosamente');
-    } catch (error: any) {
-      alert(error.response?.data?.message || 'Error al eliminar acudiente');
+    // Crear nuevos guardianes si hay
+    const newGuardianIds: string[] = [];
+    if (showNewGuardian && newGuardian.first_name.trim() && newGuardian.last_name.trim()) {
+      try {
+        const { data: createdGuardian } = await guardianAPI.create({
+          first_name: newGuardian.first_name,
+          last_name: newGuardian.last_name,
+          phone_mobile: newGuardian.phone_mobile,
+          has_whatsapp: newGuardian.has_whatsapp,
+          whatsapp_phone: newGuardian.whatsapp_phone || newGuardian.phone_mobile,
+        } as any);
+        newGuardianIds.push(createdGuardian.id);
+      } catch (error) {
+        alert('Error al crear acudiente');
+        return;
+      }
     }
-  };
 
-  const handleEditGuardian = (guardian: Guardian) => {
-    setEditingGuardianId(guardian.id);
-    setEditingGuardianData({
-      first_name: guardian.first_name,
-      last_name: guardian.last_name,
-      document_type: guardian.document_type || '',
-      document_number: guardian.document_number || '',
-      phone: guardian.phone || '',
-      email: guardian.email || '',
-      address: guardian.address || '',
-      occupation: guardian.occupation || '',
-      relationship_type: guardian.relationship_type,
-      is_primary: guardian.is_primary,
-      is_authorized_pickup: guardian.is_authorized_pickup !== undefined ? guardian.is_authorized_pickup : true,
-      lives_with: guardian.lives_with !== undefined ? guardian.lives_with : true,
-      notes: guardian.notes || '',
-    });
-  };
+    // Combinar guardianes existentes con nuevos
+    const allGuardianIds = [...selectedGuardianIds, ...newGuardianIds];
 
-  const handleSaveGuardianEdit = async () => {
-    if (!editingGuardianId || !editingGuardianData) return;
-
-    try {
-      // Separar datos del guardian y datos de la relación
-      const guardianInfo = {
-        first_name: editingGuardianData.first_name,
-        last_name: editingGuardianData.last_name,
-        document_type: editingGuardianData.document_type,
-        document_number: editingGuardianData.document_number,
-        phone: editingGuardianData.phone,
-        email: editingGuardianData.email,
-        address: editingGuardianData.address,
-        occupation: editingGuardianData.occupation,
-      };
-
-      const relationshipInfo = {
-        relationship_type: editingGuardianData.relationship_type,
-        is_primary: editingGuardianData.is_primary,
-        is_authorized_pickup: editingGuardianData.is_authorized_pickup,
-        lives_with: editingGuardianData.lives_with,
-        notes: editingGuardianData.notes,
-      };
-
-      // Actualizar datos del guardian
-      await studentAPI.updateGuardian(editingGuardianId, guardianInfo);
-
-      // Actualizar relación
-      await studentAPI.updateGuardianRelationship(student.id, editingGuardianId, relationshipInfo);
-
-      // Recargar datos del estudiante
-      const response = await studentAPI.getById(student.id);
-      setGuardians(response.data.data.guardians);
-
-      setEditingGuardianId(null);
-      setEditingGuardianData(null);
-      alert('Acudiente actualizado exitosamente');
-    } catch (error: any) {
-      console.error('Error al actualizar acudiente:', error);
-      alert(error.response?.data?.detail || 'Error al actualizar acudiente');
+    // Relacionar guardianes con la familia
+    if (familyId && allGuardianIds.length > 0) {
+      try {
+        for (const guardianId of allGuardianIds) {
+          await familyAPI.assignGuardian(guardianId, familyId, newGuardian.relationship, true);
+        }
+        // Asignar estudiante a la familia
+        if (editingStudent) {
+          await familyAPI.unassignStudent(editingStudent.id, familyId);
+        }
+        await familyAPI.assignStudent(editingStudent?.id || '', familyId, 'hijo');
+      } catch (error) {
+        console.error('Error al relacionar con familia:', error);
+      }
     }
+
+    onSubmit(formData, familyId, allGuardianIds);
   };
 
-  const handleCancelGuardianEdit = () => {
-    setEditingGuardianId(null);
-    setEditingGuardianData(null);
+  const toggleGuardian = (guardianId: string) => {
+    setSelectedGuardianIds(prev => 
+      prev.includes(guardianId) 
+        ? prev.filter(id => id !== guardianId)
+        : [...prev, guardianId]
+    );
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-      <div className="bg-white rounded-lg w-full max-w-4xl m-4 max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Sticky Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center z-10">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Editar Estudiante</h2>
-            <p className="text-sm text-gray-500 mt-1">{student.student_code} - {student.full_name}</p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowIDCard(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-            >
-              <CreditCard size={18} />
-              Ver Carnet
-            </button>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
-            >
-              <X size={18} />
-              Cerrar
-            </button>
-          </div>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+          <h2 className="text-xl font-bold text-gray-900">
+            {editingStudent ? 'Editar Estudiante' : 'Nuevo Estudiante'}
+          </h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
         </div>
 
-        {/* Scrollable Content */}
-        <div className="overflow-y-auto p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Información Personal */}
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Información Personal</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Tabs */}
+        <div className="flex border-b border-gray-200 px-6">
+          <button
+            onClick={() => setActiveTab('basic')}
+            className={`py-3 px-4 text-sm font-medium border-b-2 transition ${
+              activeTab === 'basic'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Datos Básicos
+          </button>
+          <button
+            onClick={() => setActiveTab('family')}
+            className={`py-3 px-4 text-sm font-medium border-b-2 transition flex items-center gap-2 ${
+              activeTab === 'family'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <FamilyRestroom className="w-4 h-4" />
+            Familia y Acudientes
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {activeTab === 'basic' && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nombres
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
                   <input
                     type="text"
-                    value={formData.first_name || ''}
-                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Apellidos
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.last_name || ''}
-                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Sede / Campus
-                  </label>
-                  <select
-                    value={formData.campus_id || ''}
-                    onChange={(e) => setFormData({ ...formData, campus_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     required
+                    value={formData.first_name}
+                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    className="input-field"
+                    placeholder="Nombre"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.last_name}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    className="input-field"
+                    placeholder="Apellido"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sede *</label>
+                <select
+                  required
+                  value={formData.campus_id}
+                  onChange={(e) => setFormData({ ...formData, campus_id: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="">Selecciona una sede</option>
+                  {campuses.map((campus) => (
+                    <option key={campus.id} value={campus.id}>
+                      {campus.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</label>
+                  <input
+                    type="date"
+                    value={formData.birth_date}
+                    onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Género</label>
+                  <select
+                    value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value as any })}
+                    className="input-field"
                   >
-                    <option value="">Seleccionar Sede</option>
-                    {campuses.map((campus) => (
-                      <option key={campus.id} value={campus.id}>
-                        {campus.name}
-                      </option>
-                    ))}
+                    <option value="male">Masculino</option>
+                    <option value="female">Femenino</option>
+                    <option value="other">Otro</option>
                   </select>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.email || ''}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Teléfono
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.phone || ''}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Grupo Sanguíneo
-                  </label>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Documento de Identidad</label>
+                <div className="grid grid-cols-3 gap-2">
                   <select
-                    value={formData.blood_type || ''}
-                    onChange={(e) => setFormData({ ...formData, blood_type: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    value={formData.document_type}
+                    onChange={(e) => setFormData({ ...formData, document_type: e.target.value })}
+                    className="input-field col-span-1"
                   >
-                    <option value="">Seleccionar</option>
+                    <option value="">Tipo</option>
+                    <option value="CC">CC</option>
+                    <option value="TI">TI</option>
+                    <option value="PAS">PAS</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={formData.document_number}
+                    onChange={(e) => setFormData({ ...formData, document_number: e.target.value })}
+                    className="input-field col-span-2"
+                    placeholder="Número de documento"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="input-field"
+                  placeholder=".com"
+                />
+email@ejemplo              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="input-field"
+                  placeholder="300 123 4567"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                <input
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  className="input-field"
+                  placeholder="Dirección de residencia"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Sangre</label>
+                  <select
+                    value={formData.blood_type}
+                    onChange={(e) => setFormData({ ...formData, blood_type: e.target.value })}
+                    className="input-field"
+                  >
+                    <option value="">Selecciona</option>
                     <option value="A+">A+</option>
                     <option value="A-">A-</option>
                     <option value="B+">B+</option>
@@ -1567,550 +737,199 @@ function EditStudentModal({
                     <option value="O-">O-</option>
                   </select>
                 </div>
-
                 <div>
-                  <label className="flex items-center gap-2 h-full items-end pb-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.is_active}
-                      onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                      className="rounded"
-                    />
-                    <span className="text-sm font-medium text-gray-700">Estudiante Activo</span>
-                  </label>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    URL de Foto del Estudiante
-                  </label>
-                  <input
-                    type="url"
-                    value={formData.photo_url || ''}
-                    onChange={(e) => setFormData({ ...formData, photo_url: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="https://ejemplo.com/foto.jpg"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Pega aquí la URL de una imagen alojada en internet (Imgur, Google Drive, etc.)
-                  </p>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Dirección
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Alergias</label>
                   <input
                     type="text"
-                    value={formData.address || ''}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Alergias
-                  </label>
-                  <textarea
-                    value={formData.allergies || ''}
+                    value={formData.allergies}
                     onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
-                    rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ingrese alergias conocidas si las hay..."
+                    className="input-field"
+                    placeholder="Alergias conocidas"
                   />
                 </div>
               </div>
-            </div>
+            </>
+          )}
 
-            {/* Gestión de Acudientes */}
-            <div className="border-t pt-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Acudientes {guardians.length > 0 && `(${guardians.length})`}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setShowGuardianSelector(true)}
-                  disabled={isAddingGuardian}
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
-                >
-                  <UserPlus size={18} />
-                  {isAddingGuardian ? 'Agregando...' : 'Agregar Acudiente'}
-                </button>
+          {activeTab === 'family' && (
+            <div className="space-y-6">
+              {/* Sección Familia */}
+              <div className="border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <FamilyRestroom className="w-5 h-5" />
+                    Familia
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewFamily(!showNewFamily)}
+                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    Nueva Familia
+                  </button>
+                </div>
+
+                {showNewFamily ? (
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      value={newFamilyName}
+                      onChange={(e) => setNewFamilyName(e.target.value)}
+                      className="input-field"
+                      placeholder="Nombre de la familia (ej: Familia Pérez)"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Se creará una nueva familia con este nombre
+                    </p>
+                  </div>
+                ) : (
+                  <select
+                    value={selectedFamilyId}
+                    onChange={(e) => setSelectedFamilyId(e.target.value)}
+                    className="input-field"
+                  >
+                    <option value="">Selecciona una familia existente</option>
+                    {families.filter(f => f.is_active).map((family) => (
+                      <option key={family.id} value={family.id}>
+                        {family.name || 'Familia sin nombre'}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
-              {guardians.length > 0 ? (
-                <div className="space-y-3">
-                  {guardians.map((guardian) => (
-                    <div key={guardian.id} className="border rounded-lg p-4 bg-gray-50">
-                      {editingGuardianId === guardian.id ? (
-                        // Formulario de edición
-                        <div className="space-y-4">
-                          <h4 className="font-medium text-gray-900 mb-3">Editar Acudiente</h4>
+              {/* Sección Acudientes */}
+              <div className="border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <UserCheck className="w-5 h-5" />
+                    Padres / Acudientes
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewGuardian(!showNewGuardian)}
+                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    Nuevo Acudiente
+                  </button>
+                </div>
 
-                          {/* Información Personal */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Nombres *</label>
-                              <input
-                                type="text"
-                                value={editingGuardianData.first_name}
-                                onChange={(e) => setEditingGuardianData({ ...editingGuardianData, first_name: e.target.value })}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                                required
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Apellidos *</label>
-                              <input
-                                type="text"
-                                value={editingGuardianData.last_name}
-                                onChange={(e) => setEditingGuardianData({ ...editingGuardianData, last_name: e.target.value })}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                                required
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Tipo de Documento</label>
-                              <select
-                                value={editingGuardianData.document_type}
-                                onChange={(e) => setEditingGuardianData({ ...editingGuardianData, document_type: e.target.value })}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                              >
-                                <option value="">Seleccionar</option>
-                                <option value="CC">Cédula de Ciudadanía</option>
-                                <option value="CE">Cédula de Extranjería</option>
-                                <option value="TI">Tarjeta de Identidad</option>
-                                <option value="Pasaporte">Pasaporte</option>
-                              </select>
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Número de Documento</label>
-                              <input
-                                type="text"
-                                value={editingGuardianData.document_number}
-                                onChange={(e) => setEditingGuardianData({ ...editingGuardianData, document_number: e.target.value })}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Teléfono</label>
-                              <input
-                                type="tel"
-                                value={editingGuardianData.phone}
-                                onChange={(e) => setEditingGuardianData({ ...editingGuardianData, phone: e.target.value })}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                              <input
-                                type="email"
-                                value={editingGuardianData.email}
-                                onChange={(e) => setEditingGuardianData({ ...editingGuardianData, email: e.target.value })}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                              />
-                            </div>
-                            <div className="md:col-span-2">
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Dirección</label>
-                              <input
-                                type="text"
-                                value={editingGuardianData.address}
-                                onChange={(e) => setEditingGuardianData({ ...editingGuardianData, address: e.target.value })}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Ocupación</label>
-                              <input
-                                type="text"
-                                value={editingGuardianData.occupation}
-                                onChange={(e) => setEditingGuardianData({ ...editingGuardianData, occupation: e.target.value })}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Relación *</label>
-                              <select
-                                value={editingGuardianData.relationship_type}
-                                onChange={(e) => setEditingGuardianData({ ...editingGuardianData, relationship_type: e.target.value })}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                                required
-                              >
-                                <option value="padre">Padre</option>
-                                <option value="madre">Madre</option>
-                                <option value="acudiente">Acudiente</option>
-                                <option value="otro">Otro</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          {/* Opciones de Relación */}
-                          <div className="space-y-2 pt-2 border-t">
-                            <label className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={editingGuardianData.is_primary}
-                                onChange={(e) => setEditingGuardianData({ ...editingGuardianData, is_primary: e.target.checked })}
-                                className="rounded"
-                              />
-                              <span className="text-sm text-gray-700">Acudiente principal</span>
-                            </label>
-                            <label className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={editingGuardianData.is_authorized_pickup}
-                                onChange={(e) => setEditingGuardianData({ ...editingGuardianData, is_authorized_pickup: e.target.checked })}
-                                className="rounded"
-                              />
-                              <span className="text-sm text-gray-700">Autorizado para recoger</span>
-                            </label>
-                            <label className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={editingGuardianData.lives_with}
-                                onChange={(e) => setEditingGuardianData({ ...editingGuardianData, lives_with: e.target.checked })}
-                                className="rounded"
-                              />
-                              <span className="text-sm text-gray-700">Vive con el estudiante</span>
-                            </label>
-                          </div>
-
-                          {/* Notas */}
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Notas</label>
-                            <textarea
-                              value={editingGuardianData.notes}
-                              onChange={(e) => setEditingGuardianData({ ...editingGuardianData, notes: e.target.value })}
-                              rows={2}
-                              className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-
-                          {/* Botones */}
-                          <div className="flex gap-2 justify-end pt-2">
-                            <button
-                              type="button"
-                              onClick={handleCancelGuardianEdit}
-                              className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50"
-                            >
-                              Cancelar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleSaveGuardianEdit}
-                              className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-                            >
-                              Guardar Cambios
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        // Vista normal
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-gray-900">{guardian.full_name}</p>
-                              {guardian.is_primary && (
-                                <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
-                                  Principal
-                                </span>
-                              )}
-                              {guardian.is_authorized_pickup && (
-                                <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
-                                  Autorizado
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {guardian.relationship_type}
-                              {guardian.phone && ` • ${guardian.phone}`}
-                              {guardian.email && ` • ${guardian.email}`}
-                            </p>
-                            {guardian.document_number && (
-                              <p className="text-sm text-gray-500">
-                                Doc: {guardian.document_type} {guardian.document_number}
-                              </p>
-                            )}
-                            {guardian.occupation && (
-                              <p className="text-sm text-gray-500">
-                                Ocupación: {guardian.occupation}
-                              </p>
-                            )}
-                            {guardian.address && (
-                              <p className="text-sm text-gray-500">
-                                Dirección: {guardian.address}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleEditGuardian(guardian)}
-                              className="text-blue-600 hover:text-blue-800"
-                              title="Editar acudiente"
-                            >
-                              <Edit2 size={18} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveGuardian(guardian.id)}
-                              className="text-red-600 hover:text-red-800"
-                              title="Eliminar acudiente"
-                            >
-                              <UserMinus size={18} />
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                {showNewGuardian && (
+                  <div className="bg-gray-50 p-3 rounded-lg mb-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={newGuardian.first_name}
+                        onChange={(e) => setNewGuardian({ ...newGuardian, first_name: e.target.value })}
+                        className="input-field"
+                        placeholder="Nombre"
+                      />
+                      <input
+                        type="text"
+                        value={newGuardian.last_name}
+                        onChange={(e) => setNewGuardian({ ...newGuardian, last_name: e.target.value })}
+                        className="input-field"
+                        placeholder="Apellido"
+                      />
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                  <UsersIcon size={48} className="mx-auto text-gray-400 mb-2" />
-                  <p className="text-gray-500">No hay acudientes asignados</p>
-                  <p className="text-sm text-gray-400 mt-1">Haga clic en "Agregar Acudiente" para asignar uno</p>
-                </div>
-              )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        value={newGuardian.relationship}
+                        onChange={(e) => setNewGuardian({ ...newGuardian, relationship: e.target.value })}
+                        className="input-field"
+                      >
+                        <option value="padre">Padre</option>
+                        <option value="madre">Madre</option>
+                        <option value="abuelo">Abuelo/a</option>
+                        <option value="tio">Tío/a</option>
+                        <option value="tutor">Tutor</option>
+                        <option value="otro">Otro</option>
+                      </select>
+                      <input
+                        type="tel"
+                        value={newGuardian.phone_mobile}
+                        onChange={(e) => setNewGuardian({ ...newGuardian, phone_mobile: e.target.value })}
+                        className="input-field"
+                        placeholder="Teléfono móvil"
+                      />
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newGuardian.has_whatsapp}
+                        onChange={(e) => setNewGuardian({ ...newGuardian, has_whatsapp: e.target.checked })}
+                        className="w-4 h-4 rounded text-green-600"
+                      />
+                      <span className="text-sm text-gray-700 flex items-center gap-1">
+                        <MessageCircle className="w-4 h-4 text-green-500" />
+                        Tiene WhatsApp
+                      </span>
+                    </label>
+                  </div>
+                )}
 
-              {showGuardianSelector && (
-                <div className="mt-4">
-                  <GuardianSelector
-                    onSelectExisting={(guardian) => handleAddGuardian({ ...guardian, existing: true })}
-                    onCreateNew={(guardian) => handleAddGuardian({ ...guardian, existing: false })}
-                    onCancel={() => setShowGuardianSelector(false)}
-                    isPrimary={guardians.length === 0}
-                  />
+                {/* Lista de guardianes existentes */}
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {guardians.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-4">
+                      No hay acudientes registrados
+                    </p>
+                  ) : (
+                    guardians.map((guardian) => (
+                      <label
+                        key={guardian.id}
+                        className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition ${
+                          selectedGuardianIds.includes(guardian.id)
+                            ? 'bg-blue-50 border border-blue-200'
+                            : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedGuardianIds.includes(guardian.id)}
+                          onChange={() => toggleGuardian(guardian.id)}
+                          className="w-4 h-4 rounded text-blue-600"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {guardian.full_name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {guardian.phone_mobile || 'Sin teléfono'}
+                            {guardian.has_whatsapp && (
+                              <span className="ml-2 text-green-600 flex items-center gap-1 inline">
+                                <MessageCircle className="w-3 h-3" />
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </label>
+                    ))
+                  )}
                 </div>
-              )}
+              </div>
             </div>
-          </form>
-        </div>
+          )}
 
-        {/* Sticky Footer */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-between items-center">
-          <div className="text-sm text-gray-500">
-            Los cambios se guardarán al hacer clic en "Guardar Cambios"
-          </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 pt-4 border-t">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              className="btn-secondary flex-1"
             >
               Cancelar
             </button>
             <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                handleSubmit(e as any);
-              }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              type="submit"
+              className="btn-primary flex-1"
             >
-              Guardar Cambios
+              <Plus className="w-5 h-5" />
+              {editingStudent ? 'Actualizar' : 'Crear'} Estudiante
             </button>
           </div>
-        </div>
-
-        {/* Student ID Card Modal */}
-        {showIDCard && campuses.length > 0 && (
-          <StudentIDCard
-            student={student}
-            campus={campuses.find(c => c.id === student.campus_id) || campuses[0]}
-            onClose={() => setShowIDCard(false)}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-// Student Details Modal Component (unchanged from before)
-function StudentDetailsModal({
-  student,
-  onClose,
-}: {
-  student: Student;
-  onClose: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-      <div className="bg-white rounded-lg p-6 w-full max-w-3xl m-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Detalles del Estudiante</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <X size={24} />
-          </button>
-        </div>
-
-        <div className="space-y-6">
-          {/* Basic Info */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="font-medium text-gray-900 mb-3">Información Personal</h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-gray-500">Código:</span>
-                <p className="font-medium">{student.student_code}</p>
-              </div>
-              <div>
-                <span className="text-gray-500">Nombre Completo:</span>
-                <p className="font-medium">{student.full_name}</p>
-              </div>
-              <div>
-                <span className="text-gray-500">Documento:</span>
-                <p className="font-medium">
-                  {student.document_type} {student.document_number}
-                </p>
-              </div>
-              <div>
-                <span className="text-gray-500">Fecha de Nacimiento:</span>
-                <p className="font-medium">
-                  {new Date(student.birth_date).toLocaleDateString()} ({student.age} años)
-                </p>
-              </div>
-              <div>
-                <span className="text-gray-500">Género:</span>
-                <p className="font-medium">
-                  {student.gender === 'MALE' ? 'Masculino' : student.gender === 'FEMALE' ? 'Femenino' : 'Otro'}
-                </p>
-              </div>
-              <div>
-                <span className="text-gray-500">Grupo Sanguíneo:</span>
-                <p className="font-medium">{student.blood_type || '-'}</p>
-              </div>
-              <div>
-                <span className="text-gray-500">Sede:</span>
-                <p className="font-medium">{student.campus_name}</p>
-              </div>
-              <div>
-                <span className="text-gray-500">Estado:</span>
-                <span className={`px-2 py-1 text-xs rounded-full ${
-                  student.is_active
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {student.is_active ? 'Activo' : 'Inactivo'}
-                </span>
-              </div>
-            </div>
-
-            {student.allergies && (
-              <div className="mt-4">
-                <span className="text-gray-500">Alergias:</span>
-                <p className="font-medium text-red-600">{student.allergies}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Contact Info */}
-          {(student.email || student.phone || student.address) && (
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="font-medium text-gray-900 mb-3">Información de Contacto</h3>
-              <div className="grid grid-cols-1 gap-2 text-sm">
-                {student.email && (
-                  <div>
-                    <span className="text-gray-500">Email:</span>
-                    <p className="font-medium">{student.email}</p>
-                  </div>
-                )}
-                {student.phone && (
-                  <div>
-                    <span className="text-gray-500">Teléfono:</span>
-                    <p className="font-medium">{student.phone}</p>
-                  </div>
-                )}
-                {student.address && (
-                  <div>
-                    <span className="text-gray-500">Dirección:</span>
-                    <p className="font-medium">{student.address}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Guardians */}
-          {student.guardians && student.guardians.length > 0 && (
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="font-medium text-gray-900 mb-3">
-                Acudientes ({student.guardians.length})
-              </h3>
-              <div className="space-y-3">
-                {student.guardians.map((guardian) => (
-                  <div key={guardian.id} className="bg-white rounded-lg p-3 border border-gray-200">
-                    <div className="flex justify-between items-start mb-2">
-                      <p className="font-medium text-gray-900">{guardian.full_name}</p>
-                      {guardian.is_primary && (
-                        <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
-                          Principal
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-sm space-y-1">
-                      <p className="text-gray-600">
-                        <span className="font-medium">Parentesco:</span> {guardian.relationship_type}
-                      </p>
-                      {guardian.document_number && (
-                        <p className="text-gray-600">
-                          <span className="font-medium">Documento:</span> {guardian.document_type} {guardian.document_number}
-                        </p>
-                      )}
-                      {guardian.phone && (
-                        <p className="text-gray-600">
-                          <span className="font-medium">Teléfono:</span> {guardian.phone}
-                        </p>
-                      )}
-                      {guardian.email && (
-                        <p className="text-gray-600">
-                          <span className="font-medium">Email:</span> {guardian.email}
-                        </p>
-                      )}
-                      {guardian.occupation && (
-                        <p className="text-gray-600">
-                          <span className="font-medium">Ocupación:</span> {guardian.occupation}
-                        </p>
-                      )}
-                      {guardian.address && (
-                        <p className="text-gray-600">
-                          <span className="font-medium">Dirección:</span> {guardian.address}
-                        </p>
-                      )}
-                      <div className="flex gap-3 mt-2">
-                        {guardian.is_authorized_pickup && (
-                          <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
-                            Autorizado para recoger
-                          </span>
-                        )}
-                        {guardian.lives_with && (
-                          <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full">
-                            Vive con el estudiante
-                          </span>
-                        )}
-                      </div>
-                      {guardian.notes && (
-                        <p className="text-gray-600 mt-2">
-                          <span className="font-medium">Notas:</span> {guardian.notes}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex justify-end mt-6">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
-          >
-            Cerrar
-          </button>
-        </div>
+        </form>
       </div>
     </div>
   );

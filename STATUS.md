@@ -162,6 +162,111 @@ CRUD completo de sedes/campus donde se impartirán las clases.
 - [x] Integrator: Deploy a producción ✅
 - [ ] Reviewer: En espera
 
+### FEATURE-002: Gestión de Usuarios 👥
+**Estado:** 🟢 En producción - CRUD validado y deployado  
+**Agente asignado:** Architect → Developer → Tester → Integrator  
+**Prioridad:** Alta  
+**Documentación:** `docs/05-sessions/TESTER-CONTEXT-USERS.md`
+
+**Descripción:**
+CRUD completo para gestionar usuarios del sistema (administradores, coordinadores, profesores).
+
+**Configuración de Supabase:**
+- ✅ **Confirmación de email:** Deshabilitada (users created immediately)
+- ✅ **Tabla:** `profiles` (vinculada a `auth.users`)
+- ✅ **RLS:** Habilitado con políticas para authenticated users
+- ✅ **Campos agregados:** document_number, phone, campus_id
+
+**Progreso:** 67% completado | **DEPLOYADO** ✅
+- ✅ CREATE: Funcionando perfectamente
+- ✅ READ: Lista y visualización OK
+- ✅ UPDATE: Edición con persistencia de datos OK
+- ✅ DELETE: Eliminación con confirmación OK
+- ✅ DEPLOY: Aplicación en producción
+- ⏳ Edge Cases: Pendiente
+- ⏳ UI/UX Responsive: Pendiente
+
+**URLs de Producción:**
+- 🌐 **Principal:** https://frontend-1to1ghb2h-ingludomars-projects.vercel.app
+
+**Checklist:**
+- [x] Architect: Especificación completa
+- [x] Developer: CRUD implementado
+- [x] Tester: CRUD validado (67%)
+- [x] Integrator: Deploy a producción ✅
+- [ ] Reviewer: En espera
+
+---
+
+### FEATURE-003: Gestión de Estudiantes 👨‍🎓
+**Estado:** 🟡 En testing - CRUD implementado  
+**Agente asignado:** Architect → Developer → Tester  
+**Prioridad:** Alta  
+**Documentación:** `docs/05-sessions/TESTER-CONTEXT-STUDENTS.md`
+
+**Descripción:**
+CRUD completo para gestionar estudiantes del sistema, incluyendo información personal, académica y contacto de acudientes.
+
+**Progreso:** 0% - Testing en progreso
+- ⏳ CREATE: Pendiente validar
+- ⏳ READ: Pendiente validar
+- ⏳ UPDATE: Pendiente validar
+- ⏳ DELETE: Pendiente validar
+- ⏳ Edge Cases: Pendiente
+- ⏳ UI/UX Responsive: Pendiente
+
+**URLs de Producción:**
+- 🌐 **Misma URL:** https://frontend-1to1ghb2h-ingludomars-projects.vercel.app
+
+**Checklist:**
+- [x] Architect: Especificación completa
+- [x] Developer: CRUD implementado
+- [ ] Tester: En progreso - Tester Context creado
+- [ ] Integrator: En espera
+- [ ] Reviewer: En espera
+
+### FEATURE-004: Gestión de Familias y Acudientes 👨‍👩‍👧‍👦
+**Estado:** 🟡 En desarrollo - CRUD implementado  
+**Agente asignado:** Architect → Developer → Tester → Integrator  
+**Prioridad:** Alta  
+**Documentación:** `docs/03-features/features/FEATURE-004-gestion-familias.md`
+
+**Descripción:**
+Sistema completo para gestionar familias, padres y acudientes. Permite:
+- CRUD de familias (agrupar hermanos)
+- CRUD de padres/acudientes con múltiples teléfonos
+- Sistema de WhatsApp (teléfono dedicado o compartido)
+- Relación muchos-a-muchos entre estudiantes, familias y acudientes
+
+**Modelo de Datos:**
+- `families` - Tabla de familias
+- `student_families` - Relación estudiante → familia
+- `guardian_families` - Relación padre/acudiente → familia
+- `guardians` - Campos actualizados: phone_home, phone_mobile, whatsapp_phone, has_whatsapp, whatsapp_note
+
+**Progreso:** 90% completado
+- ✅ DB Migration: Ejecutada en Supabase ✅
+- ✅ API: Implementada
+- ✅ UI Familias: Completado
+- ✅ UI Padres/Acudientes: Completado
+- ✅ Rutas y Menú: Completado
+- ✅ Modal Estudiantes: Actualizado con Familia y Acudientes
+- ⏳ Testing: Pendiente
+
+**URLs de Producción:**
+- 🌐 **Misma URL:** https://frontend-1to1ghb2h-ingludomars-projects.vercel.app
+
+**Checklist:**
+- [x] Architect: Especificación completa
+- [x] Developer: CRUD implementado
+- [x] Migración ejecutada en Supabase ✅
+- [ ] Tester: Pendiente
+- [ ] Integrator: Pendiente
+- [ ] Reviewer: Pendiente
+
+**Migration SQL:** `database/migration-families-guardians.sql`
+**⚠️ IMPORTANTE:** Migración ejecutada en Supabase ✅ 27 Feb 2026
+
 ---
 
 ## 🐛 PROBLEMAS CONOCIDOS
