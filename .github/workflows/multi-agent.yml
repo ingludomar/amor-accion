@@ -1,0 +1,351 @@
+name: Multi-Agent Workflow Validation
+
+on:
+  pull_request:
+    branches: [ develop, main ]
+    types: [ opened, synchronize, reopened ]
+  
+  push:
+    branches: [ develop, main ]
+
+jobs:
+  # ==========================================
+  # AGENT-DEVELOPER VALIDATION
+  # ==========================================
+  developer-checks:
+    name: Developer Pre-submission
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: frontend
+      run: npm ci
+    
+    - name: TypeScript compilation
+      working-directory: frontend
+      run: npx tsc --noEmit
+      
+    - name: Lint check
+      working-directory: frontend
+      run: npm run lint
+    
+    - name: Build verification
+      working-directory: frontend
+      run: npm run build
+    
+    - name: Check for console.logs
+      working-directory: frontend/src
+      run: |
+        if grep -r "console.log" --include="*.ts" --include="*.tsx" .; then
+          echo "⚠️  Warning: Found console.log statements. Please remove before submission."
+          exit 1
+        fi
+        echo "✅ No console.log statements found"
+    
+    - name: Check for TODO/FIXME comments
+      working-directory: frontend/src
+      run: |
+        TODO_COUNT=$(grep -r "TODO\|FIXME" --include="*.ts" --include="*.tsx" -c . || echo "0")
+        if [ "$TODO_COUNT" -gt 0 ]; then
+          echo "⚠️  Found $TODO_COUNT TODO/FIXME comments:"
+          grep -r "TODO\|FIXME" --include="*.ts" --include="*.tsx" -n .
+          echo ""
+          echo "Please address or document these before submission."
+        fi
+
+  # ==========================================
+  # AGENT-TESTER VALIDATION
+  # ==========================================
+  tester-checks:
+    name: Tester Validation
+    runs-on: ubuntu-latest
+    needs: developer-checks
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: frontend
+      run: npm ci
+    
+    - name: Run tests
+      working-directory: frontend
+      run: npm test
+    
+    - name: Generate coverage report
+      working-directory: frontend
+      run: npm run test:coverage -- --reporter=json --outputFile=coverage-summary.json
+      continue-on-error: true
+    
+    - name: Check coverage threshold
+      working-directory: frontend
+      run: |
+        if [ -f coverage-summary.json ]; then
+          COVERAGE=$(cat coverage-summary.json | jq '.total.lines.pct // 0')
+          echo "Current coverage: $COVERAGE%"
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "❌ Coverage $COVERAGE% is below threshold of 80%"
+            exit 1
+          else
+            echo "✅ Coverage $COVERAGE% meets threshold"
+          fi
+        else
+          echo "⚠️  Coverage report not found"
+        fi
+      continue-on-error: true
+    
+    - name: Verify test files exist
+      working-directory: frontend
+      run: |
+        TEST_COUNT=$(find src -name "*.test.ts" -o -name "*.test.tsx" | wc -l)
+        echo "Found $TEST_COUNT test files"
+        if [ "$TEST_COUNT" -eq 0 ]; then
+          echo "❌ No test files found. Please add tests."
+          exit 1
+        fi
+        echo "✅ Test files exist"
+
+  # ==========================================
+  # AGENT-REVIEWER VALIDATION
+  # ==========================================
+  reviewer-checks:
+    name: Reviewer Checks
+    runs-on: ubuntu-latest
+    needs: [developer-checks, tester-checks]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Check PR description
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const pr = context.payload.pull_request;
+          if (!pr) {
+            console.log('Not a PR event');
+            return;
+          }
+          
+          const body = pr.body || '';
+          const checks = [
+            { name: 'Description', pattern: /##?\s*Description/i },
+            { name: 'Changes list', pattern: /##?\s*Changes/i },
+            { name: 'Tests checkbox', pattern: /-\s*\[x\].*test/i },
+            { name: 'Issue reference', pattern: /(closes?|fixes?|resolves?)\s*#\d+/i }
+          ];
+          
+          let allGood = true;
+          checks.forEach(check => {
+            if (check.pattern.test(body)) {
+              console.log(`✅ ${check.name} found`);
+            } else {
+              console.log(`❌ ${check.name} missing`);
+              allGood = false;
+            }
+          });
+          
+          if (!allGood) {
+            core.setFailed('PR description is incomplete. Please follow the template.');
+          }
+    
+    - name: Check commit messages
+      run: |
+        git log --format=%s origin/${{ github.base_ref }}..HEAD | while read line; do
+          if [[ $line =~ ^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?:\ .+ ]]; then
+            echo "✅ $line"
+          else
+            echo "❌ Invalid commit message: $line"
+            echo "Expected format: type(scope): description"
+            exit 1
+          fi
+        done
+    
+    - name: Check file sizes
+      run: |
+        find frontend/src -type f \( -name "*.ts" -o -name "*.tsx" \) -size +50k | while read file; do
+          echo "⚠️  Large file detected: $file"
+        done
+    
+    - name: Check for sensitive data
+      working-directory: frontend
+      run: |
+        if grep -r "password\|secret\|key" --include="*.ts" --include="*.tsx" . | grep -v "test\|mock\|example"; then
+          echo "⚠️  Warning: Possible sensitive data in code. Please review."
+        fi
+
+  # ==========================================
+  # AGENT-INTEGRATOR DEPLOY
+  # ==========================================
+  integrator-deploy:
+    name: Integrator - Deploy Preview
+    runs-on: ubuntu-latest
+    needs: [developer-checks, tester-checks, reviewer-checks]
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: frontend
+      run: npm ci
+    
+    - name: Build for production
+      working-directory: frontend
+      run: npm run build
+      env:
+        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+        VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+    
+    - name: Deploy to Vercel (Preview)
+      uses: amondnet/vercel-action@v25
+      if: github.event.pull_request.head.repo.full_name == github.repository
+      with:
+        vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        working-directory: ./frontend
+    
+    - name: Comment PR with preview URL
+      uses: actions/github-script@v7
+      if: github.event_name == 'pull_request'
+      with:
+        script: |
+          const prNumber = context.payload.pull_request.number;
+          github.rest.issues.createComment({
+            issue_number: prNumber,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `🚀 **Preview deployment ready!**
+            
+            All checks passed. Ready for final review.
+            
+            **Next steps:**
+            1. Reviewer approves PR
+            2. Integrator merges to develop
+            3. Feature will be deployed to staging`
+          });
+
+  # ==========================================
+  # FINAL VALIDATION
+  # ==========================================
+  final-validation:
+    name: Final Validation
+    runs-on: ubuntu-latest
+    needs: [developer-checks, tester-checks, reviewer-checks]
+    if: always()
+    
+    steps:
+    - name: Summary
+      run: |
+        echo "=========================================="
+        echo "  MULTI-AGENT WORKFLOW VALIDATION"
+        echo "=========================================="
+        echo ""
+        echo "✅ Developer Checks:     ${{ needs.developer-checks.result }}"
+        echo "✅ Tester Checks:        ${{ needs.tester-checks.result }}"
+        echo "✅ Reviewer Checks:      ${{ needs.reviewer-checks.result }}"
+        echo ""
+        echo "=========================================="
+        
+        if [ "${{ needs.developer-checks.result }}" = "success" ] && \
+           [ "${{ needs.tester-checks.result }}" = "success" ] && \
+           [ "${{ needs.reviewer-checks.result }}" = "success" ]; then
+          echo "✅ ALL CHECKS PASSED"
+          echo "Ready for AGENT-INTEGRATOR"
+        else
+          echo "❌ SOME CHECKS FAILED"
+          echo "Please fix issues and try again"
+          exit 1
+        fi
+
+  # ==========================================
+  # PRODUCTION DEPLOY (on main branch)
+  # ==========================================
+  production-deploy:
+    name: Production Deploy
+    runs-on: ubuntu-latest
+    needs: [developer-checks, tester-checks, reviewer-checks]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: frontend
+      run: npm ci
+    
+    - name: Build for production
+      working-directory: frontend
+      run: npm run build
+      env:
+        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+        VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+    
+    - name: Deploy to Production
+      uses: amondnet/vercel-action@v25
+      with:
+        vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        working-directory: ./frontend
+        vercel-args: '--prod'
+    
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.run_number }}
+        release_name: Release ${{ github.run_number }}
+        body: |
+          ## Release ${{ github.run_number }}
+          
+          ### Features
+          - See commits for details
+          
+          ### Validation
+          - ✅ All tests passing
+          - ✅ Code reviewed
+          - ✅ Build successful
+          
+          ### Deployed to
+          - Production: [URL]
+        draft: false
+        prerelease: false
