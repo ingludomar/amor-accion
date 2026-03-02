@@ -995,3 +995,28 @@ export default {
   attendanceAPI,
   userAPI,
 };
+
+// Additional types for Attendance
+export type SessionStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+
+export interface CreateSessionRequest {
+  course_group_id?: string;
+  subject_id?: string;
+  teacher_id?: string;
+  period_id?: string;
+  session_date: string;
+  start_time: string;
+  end_time: string;
+  status?: SessionStatus;
+  topic?: string;
+  notes?: string;
+}
+
+export interface CreateAttendanceRequest {
+  class_session_id: string;
+  student_id: string;
+  status: AttendanceStatus;
+  arrival_time?: string;
+  notes?: string;
+}
