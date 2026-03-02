@@ -86,7 +86,7 @@ export default function Students() {
 
   // Create mutation
   const createMutation = useMutation({
-    mutationFn: (data: CreateStudentRequest) => studentAPI.create(data),
+    mutationFn: (data: any) => studentAPI.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
       setShowCreateModal(false);

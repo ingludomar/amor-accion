@@ -116,7 +116,7 @@ export default function Campuses() {
         },
       });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(formData as any);
     }
   };
 
