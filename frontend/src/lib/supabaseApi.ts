@@ -480,11 +480,9 @@ export const guardianAPI = {
   },
 
   create: async (guardian: Omit<Guardian, 'id' | 'full_name'>) => {
-    const fullName = `${guardian.first_name} ${guardian.last_name}`;
-    
     const { data, error } = await supabase
       .from('guardians')
-      .insert({ ...guardian, full_name: fullName })
+      .insert(guardian)
       .select()
       .single();
     
@@ -493,12 +491,7 @@ export const guardianAPI = {
   },
 
   update: async (id: string, guardian: Partial<Guardian>) => {
-    const updates = { ...guardian };
-    if (guardian.first_name || guardian.last_name) {
-      const firstName = guardian.first_name || '';
-      const lastName = guardian.last_name || '';
-      updates.full_name = `${firstName} ${lastName}`.trim();
-    }
+    const { full_name, ...updates } = guardian;
     
     const { data, error } = await supabase
       .from('guardians')
