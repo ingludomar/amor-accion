@@ -488,13 +488,21 @@ function CreateStudentModal({
     // Crear nueva familia si es necesario
     if (showNewFamily && newFamilyName.trim()) {
       try {
-        const { data: newFamily } = await familyAPI.create({
+        const { data: newFamily, error: familyError } = await familyAPI.create({
           name: newFamilyName,
           is_active: true,
         });
-        familyId = newFamily.id;
-      } catch (error) {
-        alert('Error al crear familia');
+        
+        if (familyError) {
+          alert('Error al crear familia: ' + familyError.message);
+          return;
+        }
+        
+        if (newFamily) {
+          familyId = newFamily.id;
+        }
+      } catch (error: any) {
+        alert('Error al crear familia: ' + (error?.message || 'Error desconocido'));
         return;
       }
     }
@@ -503,16 +511,24 @@ function CreateStudentModal({
     const newGuardianIds: string[] = [];
     if (showNewGuardian && newGuardian.first_name.trim() && newGuardian.last_name.trim()) {
       try {
-        const { data: createdGuardian } = await guardianAPI.create({
+        const { data: createdGuardian, error: guardianError } = await guardianAPI.create({
           first_name: newGuardian.first_name,
           last_name: newGuardian.last_name,
           phone_mobile: newGuardian.phone_mobile,
           has_whatsapp: newGuardian.has_whatsapp,
           whatsapp_phone: newGuardian.whatsapp_phone || newGuardian.phone_mobile,
         } as any);
-        newGuardianIds.push(createdGuardian.id);
-      } catch (error) {
-        alert('Error al crear acudiente');
+        
+        if (guardianError) {
+          alert('Error al crear acudiente: ' + guardianError.message);
+          return;
+        }
+        
+        if (createdGuardian) {
+          newGuardianIds.push(createdGuardian.id);
+        }
+      } catch (error: any) {
+        alert('Error al crear acudiente: ' + (error?.message || 'Error desconocido'));
         return;
       }
     }
