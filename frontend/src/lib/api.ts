@@ -4,9 +4,10 @@ export * from './supabaseClient';
 // Re-export from supabaseApi
 export * from './supabaseApi';
 
-// Explicit exports for types
-export type { ClassSession, Campus, Student, Guardian } from './supabaseApi';
-export type { SessionStatus, AttendanceStatus } from './supabaseApi';
+// Define types directly to avoid re-export issues
+export type SessionStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+
 export interface CreateSessionRequest {
   course_group_id?: string;
   subject_id?: string;
@@ -15,14 +16,15 @@ export interface CreateSessionRequest {
   session_date: string;
   start_time: string;
   end_time: string;
-  status?: string;
+  status?: SessionStatus;
   topic?: string;
   notes?: string;
 }
+
 export interface CreateAttendanceRequest {
   class_session_id: string;
   student_id: string;
-  status: string;
+  status: AttendanceStatus;
   arrival_time?: string;
   notes?: string;
 }
