@@ -437,6 +437,7 @@ function CreateStudentModal({
 
   // Estado para nuevos acudientes
   const [selectedGuardianIds, setSelectedGuardianIds] = useState<string[]>([]);
+  const [guardianRelationships, setGuardianRelationships] = useState<Record<string, string>>({});
   const [showNewGuardian, setShowNewGuardian] = useState(false);
   const [newGuardian, setNewGuardian] = useState({
     first_name: '',
@@ -447,6 +448,26 @@ function CreateStudentModal({
     email: '',
     relationship: 'padre',
   });
+
+  // Toggle guardian y guardar tipo de relación
+  const toggleGuardian = (guardianId: string) => {
+    setSelectedGuardianIds(prev => {
+      if (prev.includes(guardianId)) {
+        // Quitar
+        const { [guardianId]: _, ...rest } = guardianRelationships;
+        setGuardianRelationships(rest);
+        return prev.filter(id => id !== guardianId);
+      } else {
+        // Agregar con tipo por defecto
+        setGuardianRelationships(prev => ({ ...prev, [guardianId]: 'otro' }));
+        return [...prev, guardianId];
+      }
+    });
+  };
+
+  const updateGuardianRelationship = (guardianId: string, relationship: string) => {
+    setGuardianRelationships(prev => ({ ...prev, [guardianId]: relationship }));
+  };
 
   // Cargar datos existentes si es edición
   useEffect(() => {
@@ -476,6 +497,12 @@ function CreateStudentModal({
       // Cargar guardianes si existen
       if (editingStudent.guardians && editingStudent.guardians.length > 0) {
         setSelectedGuardianIds(editingStudent.guardians.map(g => g.id));
+        // Cargar tipos de relación
+        const relationships: Record<string, string> = {};
+        editingStudent.guardians.forEach((g: any) => {
+          relationships[g.id] = g.relationship_type || 'otro';
+        });
+        setGuardianRelationships(relationships);
       }
     }
   }, [editingStudent, campuses]);
@@ -536,31 +563,59 @@ function CreateStudentModal({
     // Combinar guardianes existentes con nuevos
     const allGuardianIds = [...selectedGuardianIds, ...newGuardianIds];
 
-    // Relacionar guardianes con la familia
-    if (familyId && allGuardianIds.length > 0) {
+    // Crear el estudiante primero
+    let studentId = editingStudent?.id;
+    
+    if (editingStudent) {
+      await onSubmit(formData, familyId || undefined, undefined);
+      studentId = editingStudent.id;
+    } else {
+      // Crear nuevo estudiante
+      const { data: newStudent, error: studentError } = await studentAPI.create(formData as CreateStudentRequest);
+      if (studentError) {
+        alert('Error al crear estudiante: ' + studentError.message);
+        return;
+      }
+      studentId = newStudent.id;
+    }
+
+    // Relacionar con familia
+    if (familyId) {
       try {
-        for (const guardianId of allGuardianIds) {
-          await familyAPI.assignGuardian(guardianId, familyId, newGuardian.relationship, true);
-        }
         // Asignar estudiante a la familia
         if (editingStudent) {
           await familyAPI.unassignStudent(editingStudent.id, familyId);
         }
-        await familyAPI.assignStudent(editingStudent?.id || '', familyId, 'hijo');
+        await familyAPI.assignStudent(studentId, familyId, 'hijo');
       } catch (error) {
         console.error('Error al relacionar con familia:', error);
       }
     }
 
-    onSubmit(formData, familyId, allGuardianIds);
-  };
+    // Relacionar guardianes con el estudiante (con tipo de relación)
+    if (allGuardianIds.length > 0) {
+      try {
+        // Primero eliminar relaciones existentes para edición
+        if (editingStudent && editingStudent.guardians) {
+          for (const g of editingStudent.guardians) {
+            await studentAPI.removeGuardian(studentId, g.id);
+          }
+        }
+        
+        // Agregar nuevas relaciones con tipo
+        for (const guardianId of allGuardianIds) {
+          const relationshipType = guardianRelationships[guardianId] || 'otro';
+          await studentAPI.addGuardian(studentId, guardianId, relationshipType, true);
+        }
+      } catch (error) {
+        console.error('Error al relacionar guardianes:', error);
+      }
+    }
 
-  const toggleGuardian = (guardianId: string) => {
-    setSelectedGuardianIds(prev => 
-      prev.includes(guardianId) 
-        ? prev.filter(id => id !== guardianId)
-        : [...prev, guardianId]
-    );
+    // Recargar y cerrar
+    queryClient.invalidateQueries({ queryKey: ['students'] });
+    onClose();
+    alert('Estudiante guardado exitosamente');
   };
 
   return (
@@ -885,9 +940,9 @@ email@ejemplo              </div>
                     </p>
                   ) : (
                     guardians.map((guardian) => (
-                      <label
+                      <div
                         key={guardian.id}
-                        className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition ${
+                        className={`flex items-center gap-2 p-2 rounded-lg transition ${
                           selectedGuardianIds.includes(guardian.id)
                             ? 'bg-blue-50 border border-blue-200'
                             : 'hover:bg-gray-50'
@@ -912,7 +967,22 @@ email@ejemplo              </div>
                             )}
                           </p>
                         </div>
-                      </label>
+                        {selectedGuardianIds.includes(guardian.id) && (
+                          <select
+                            value={guardianRelationships[guardian.id] || 'otro'}
+                            onChange={(e) => updateGuardianRelationship(guardian.id, e.target.value)}
+                            className="text-xs border rounded px-1 py-1"
+                          >
+                            <option value="padre">Padre</option>
+                            <option value="madre">Madre</option>
+                            <option value="abuelo">Abuelo/a</option>
+                            <option value="abuela">Abuela</option>
+                            <option value="tio">Tío/a</option>
+                            <option value="tutor">Tutor</option>
+                            <option value="otro">Otro</option>
+                          </select>
+                        )}
+                      </div>
                     ))
                   )}
                 </div>

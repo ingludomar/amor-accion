@@ -433,12 +433,13 @@ export const studentAPI = {
   },
 
   // Guardians
-  addGuardian: async (studentId: string, guardianId: string, isPrimary: boolean = false) => {
+  addGuardian: async (studentId: string, guardianId: string, relationshipType: string = 'otro', isPrimary: boolean = false) => {
     const { data, error } = await supabase
       .from('student_guardians')
       .insert({
         student_id: studentId,
         guardian_id: guardianId,
+        relationship_type: relationshipType,
         is_primary: isPrimary,
         is_authorized_pickup: true
       })
@@ -458,6 +459,45 @@ export const studentAPI = {
     
     if (error) throw error;
     return { error: null };
+  },
+
+  // Obtener hermanos (estudiantes con mismos padres/madre)
+  getSiblings: async (studentId: string) => {
+    // Primero obtener los padres/madre de este estudiante
+    const { data: studentGuardians } = await supabase
+      .from('student_guardians')
+      .select('guardian_id, relationship_type')
+      .eq('student_id', studentId)
+      .in('relationship_type', ['padre', 'madre']);
+
+    if (!studentGuardians || studentGuardians.length === 0) {
+      return { data: [], error: null };
+    }
+
+    const parentIds = studentGuardians.map(sg => sg.guardian_id);
+
+    // Buscar otros estudiantes que tengan los mismos padres/madre
+    const { data: siblingRelations } = await supabase
+      .from('student_guardians')
+      .select('student_id, relationship_type, guardian:guardians(*)')
+      .in('guardian_id', parentIds)
+      .neq('student_id', studentId)
+      .in('relationship_type', ['padre', 'madre']);
+
+    if (!siblingRelations || siblingRelations.length === 0) {
+      return { data: [], error: null };
+    }
+
+    // Obtener datos completos de los estudiantes hermanos
+    const siblingStudentIds = [...new Set(siblingRelations.map(sr => sr.student_id))];
+    
+    const { data: siblings, error } = await supabase
+      .from('students')
+      .select('*')
+      .in('id', siblingStudentIds);
+
+    if (error) throw error;
+    return { data: siblings || [], error: null };
   },
 };
 
