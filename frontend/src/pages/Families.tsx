@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
 import { familyAPI, Family, CreateFamilyRequest } from '../lib/supabaseApi';
 import { 
-  FamilyRestroom, 
+  Users, 
   Plus, 
   Pencil, 
   Trash2, 
@@ -132,7 +132,7 @@ export default function Families() {
         <div className="page-header">
           <div className="relative">
             <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
-              <FamilyRestroom className="w-8 h-8" />
+              <Users className="w-8 h-8" />
               Gestión de Familias
             </h1>
             <p className="text-blue-100">
@@ -169,7 +169,7 @@ export default function Families() {
           <div className="stat-card">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-blue-100 rounded-xl">
-                <FamilyRestroom className="w-6 h-6 text-blue-600" />
+                <Users className="w-6 h-6 text-blue-600" />
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Familias</p>
@@ -188,7 +188,7 @@ export default function Families() {
             </div>
           ) : families.length === 0 ? (
             <div className="p-12 text-center">
-              <FamilyRestroom className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+              <Users className="w-16 h-16 mx-auto text-gray-300 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 No hay familias registradas
               </h3>

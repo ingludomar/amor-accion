@@ -15,7 +15,7 @@ import {
   ChevronRight,
   UserCircle,
   Settings,
-  FamilyRestroom,
+  Users,
   UserCheck
 } from 'lucide-react';
 
@@ -47,7 +47,7 @@ export default function Layout({ children }: LayoutProps) {
     { name: 'Sedes', href: '/campuses', icon: Building2 },
     { name: 'Usuarios', href: '/users', icon: Users },
     { name: 'Estudiantes', href: '/students', icon: School },
-    { name: 'Familias', href: '/families', icon: FamilyRestroom },
+    { name: 'Familias', href: '/families', icon: Users },
     { name: 'Padres/Acudientes', href: '/guardians', icon: UserCheck },
     { name: 'Años Escolares', href: '/school-years', icon: Calendar },
     { name: 'Asistencia', href: '/attendance', icon: ClipboardList },

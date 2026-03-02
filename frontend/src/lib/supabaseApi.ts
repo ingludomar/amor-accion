@@ -258,7 +258,9 @@ export enum RelationshipType {
 }
 
 // Tipos de request
-export type CreateStudentRequest = Omit<Student, 'id' | 'created_at' | 'student_code' | 'full_name' | 'age'>;
+export type CreateStudentRequest = Omit<Student, 'id' | 'created_at' | 'student_code' | 'full_name' | 'age'> & {
+  campus_id?: string;
+};
 export type UpdateStudentRequest = Partial<Omit<Student, 'id' | 'created_at' | 'student_code'>>;
 export type GuardianCreate = Omit<Guardian, 'id' | 'full_name'> & {
   relationship_type: RelationshipType;
