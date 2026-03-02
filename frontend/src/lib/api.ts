@@ -1,2 +1,3 @@
-// Re-export from supabaseApi for compatibility
+// Re-export from supabaseClient and supabaseApi for compatibility
+export * from './supabaseClient';
 export * from './supabaseApi';
