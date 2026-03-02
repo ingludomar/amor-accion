@@ -4,7 +4,7 @@ import ImageUpload from '../components/ImageUpload';
 import { uploadLogo } from '../lib/storageApi';
 import { Settings, Upload, CheckCircle } from 'lucide-react';
 
-export default function SettingsPage() {
+export default function Settings() {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
