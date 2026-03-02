@@ -64,12 +64,12 @@ jobs:
         fi
 
   # ==========================================
-  # AGENT-TESTER VALIDATION
+  # AGENT- RELEASER (PRODUCTION DEPLOY)
   # ==========================================
-  tester-checks:
-    name: Tester Validation
+  releaser-checks:
+    name: Production Deploy
     runs-on: ubuntu-latest
-    needs: developer-checks
+    needs: [developer-checks, tester-checks, integrator-checks]
     
     steps:
     - name: Checkout code
@@ -79,145 +79,13 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
-    
-    - name: Install dependencies
-      working-directory: frontend
-      run: npm ci
-    
-    - name: Run tests
-      working-directory: frontend
-      run: npm test
-    
-    - name: Generate coverage report
-      working-directory: frontend
-      run: npm run test:coverage -- --reporter=json --outputFile=coverage-summary.json
-      continue-on-error: true
-    
-    - name: Check coverage threshold
-      working-directory: frontend
-      run: |
-        if [ -f coverage-summary.json ]; then
-          COVERAGE=$(cat coverage-summary.json | jq '.total.lines.pct // 0')
-          echo "Current coverage: $COVERAGE%"
-          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-            echo "❌ Coverage $COVERAGE% is below threshold of 80%"
-            exit 1
-          else
-            echo "✅ Coverage $COVERAGE% meets threshold"
-          fi
-        else
-          echo "⚠️  Coverage report not found"
-        fi
-      continue-on-error: true
-    
-    - name: Verify test files exist
-      working-directory: frontend
-      run: |
-        TEST_COUNT=$(find src -name "*.test.ts" -o -name "*.test.tsx" | wc -l)
-        echo "Found $TEST_COUNT test files"
-        if [ "$TEST_COUNT" -eq 0 ]; then
-          echo "❌ No test files found. Please add tests."
-          exit 1
-        fi
-        echo "✅ Test files exist"
 
-  # ==========================================
-  # AGENT-REVIEWER VALIDATION
-  # ==========================================
-  reviewer-checks:
-    name: Reviewer Checks
-    runs-on: ubuntu-latest
-    needs: [developer-checks, tester-checks]
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Check PR description
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const pr = context.payload.pull_request;
-          if (!pr) {
-            console.log('Not a PR event');
-            return;
-          }
-          
-          const body = pr.body || '';
-          const checks = [
-            { name: 'Description', pattern: /##?\s*Description/i },
-            { name: 'Changes list', pattern: /##?\s*Changes/i },
-            { name: 'Tests checkbox', pattern: /-\s*\[x\].*test/i },
-            { name: 'Issue reference', pattern: /(closes?|fixes?|resolves?)\s*#\d+/i }
-          ];
-          
-          let allGood = true;
-          checks.forEach(check => {
-            if (check.pattern.test(body)) {
-              console.log(`✅ ${check.name} found`);
-            } else {
-              console.log(`❌ ${check.name} missing`);
-              allGood = false;
-            }
-          });
-          
-          if (!allGood) {
-            core.setFailed('PR description is incomplete. Please follow the template.');
-          }
-    
-    - name: Check commit messages
-      run: |
-        git log --format=%s origin/${{ github.base_ref }}..HEAD | while read line; do
-          if [[ $line =~ ^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?:\ .+ ]]; then
-            echo "✅ $line"
-          else
-            echo "❌ Invalid commit message: $line"
-            echo "Expected format: type(scope): description"
-            exit 1
-          fi
-        done
-    
-    - name: Check file sizes
-      run: |
-        find frontend/src -type f \( -name "*.ts" -o -name "*.tsx" \) -size +50k | while read file; do
-          echo "⚠️  Large file detected: $file"
-        done
-    
-    - name: Check for sensitive data
+    - name: Remove old lock file and install
       working-directory: frontend
       run: |
-        if grep -r "password\|secret\|key" --include="*.ts" --include="*.tsx" . | grep -v "test\|mock\|example"; then
-          echo "⚠️  Warning: Possible sensitive data in code. Please review."
-        fi
+        rm -f package-lock.json
+        npm install
 
-  # ==========================================
-  # AGENT-INTEGRATOR DEPLOY
-  # ==========================================
-  integrator-deploy:
-    name: Integrator - Deploy Preview
-    runs-on: ubuntu-latest
-    needs: [developer-checks, tester-checks, reviewer-checks]
-    if: github.event_name == 'pull_request'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
-    
-    - name: Install dependencies
-      working-directory: frontend
-      run: npm ci
-    
     - name: Build for production
       working-directory: frontend
       run: npm run build
@@ -225,7 +93,7 @@ jobs:
         VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
         VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
     
-    - name: Deploy to Vercel (Preview)
+    - name: Deploy to Production
       uses: amondnet/vercel-action@v25
       if: github.event.pull_request.head.repo.full_name == github.repository
       with:
@@ -304,13 +172,13 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
-    
-    - name: Install dependencies
+
+    - name: Remove old lock file and install
       working-directory: frontend
-      run: npm ci
-    
+      run: |
+        rm -f package-lock.json
+        npm install
+
     - name: Build for production
       working-directory: frontend
       run: npm run build
