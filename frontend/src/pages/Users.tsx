@@ -5,7 +5,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
-import { userAPI, campusAPI, UserDetail, CreateUserRequest, UpdateUserRequest, Role, Campus } from '../lib/api';
+import { userAPI, campusAPI } from '../lib/supabaseApi';
+import type { UserDetail, CreateUserRequest, UpdateUserRequest, Role, Campus } from '../lib/supabaseApi';
 import { Users as UsersIcon, Plus, Pencil, Trash2, X, Mail, Phone, Shield, AlertCircle, CheckCircle, Home, ChevronRight } from 'lucide-react';
 
 export default function Users() {
@@ -22,9 +23,7 @@ export default function Users() {
     document_number: '',
     phone: '',
     role_ids: [],
-    campus_ids: [],
-    is_teacher: false,
-    teacher_code: '',
+    campus_id: '', // Solo un campus
   });
 
   // Validation errors state
@@ -36,29 +35,44 @@ export default function Users() {
   });
 
   // Fetch users
-  const { data: usersData, isLoading: usersLoading } = useQuery({
+  const { data: usersData, isLoading: usersLoading, error: usersError } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
-      const response = await userAPI.getAll();
-      return response.data.data;
+      try {
+        const response = await userAPI.getAll();
+        return response.data.data || [];
+      } catch (err) {
+        console.error('Error fetching users:', err);
+        throw err;
+      }
     },
   });
 
   // Fetch roles
-  const { data: rolesData } = useQuery({
+  const { data: rolesData, error: rolesError } = useQuery({
     queryKey: ['roles'],
     queryFn: async () => {
-      const response = await userAPI.getRoles();
-      return response.data.data.items as Role[];
+      try {
+        const response = await userAPI.getRoles();
+        return response.data.data.items as Role[];
+      } catch (err) {
+        console.error('Error fetching roles:', err);
+        throw err;
+      }
     },
   });
 
   // Fetch campuses
-  const { data: campusesData } = useQuery({
+  const { data: campusesData, error: campusesError } = useQuery({
     queryKey: ['campuses'],
     queryFn: async () => {
-      const response = await campusAPI.getAll();
-      return response.data.data.items as Campus[];
+      try {
+        const response = await campusAPI.getAll();
+        return response.data?.data?.items || response.data || [];
+      } catch (err) {
+        console.error('Error fetching campuses:', err);
+        throw err;
+      }
     },
   });
 
@@ -68,6 +82,10 @@ export default function Users() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       closeModal();
+    },
+    onError: (error: any) => {
+      console.error('Error al crear usuario:', error);
+      alert('Error al crear usuario: ' + (error.message || 'Error desconocido'));
     },
   });
 
@@ -79,6 +97,10 @@ export default function Users() {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       closeModal();
     },
+    onError: (error: any) => {
+      console.error('Error al actualizar usuario:', error);
+      alert('Error al actualizar usuario: ' + (error.message || 'Error desconocido'));
+    },
   });
 
   // Delete user mutation
@@ -86,6 +108,10 @@ export default function Users() {
     mutationFn: userAPI.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error: any) => {
+      console.error('Error al eliminar usuario:', error);
+      alert('Error al eliminar usuario: ' + (error.message || 'Error desconocido'));
     },
   });
 
@@ -100,30 +126,26 @@ export default function Users() {
       document_number: '',
       phone: '',
       role_ids: [],
-      campus_ids: [],
-      is_teacher: false,
-      teacher_code: '',
+      campus_id: '',
     });
     setIsModalOpen(true);
   };
 
   const openEditModal = (user: UserDetail) => {
     setEditingUser(user);
-    const roleIds = rolesData?.filter(r => user.roles.includes(r.name)).map(r => r.id) || [];
-    const campusIds = user.campuses.map(c => c.id);
+    // Fix: user.role es string, no array. Convertir a array de IDs
+    const roleIds = user.role ? [user.role] : [];
 
     setFormData({
       email: user.email,
-      username: user.username,
+      username: user.username || '',
       password: '', // Don't show password in edit mode
-      full_name: user.full_name,
-      document_type: user.document_type || 'CC',
+      full_name: user.full_name || '',
+      document_type: 'CC',
       document_number: user.document_number || '',
       phone: user.phone || '',
       role_ids: roleIds,
-      campus_ids: campusIds,
-      is_teacher: user.is_teacher,
-      teacher_code: user.teacher_code || '',
+      campus_id: user.campus_id || '',
     });
     setIsModalOpen(true);
   };
@@ -170,9 +192,9 @@ export default function Users() {
       isValid = false;
     }
 
-    // Validate campuses
-    if (formData.campus_ids.length === 0) {
-      errors.campuses = 'Debe seleccionar al menos una sede';
+    // Validate campus
+    if (!formData.campus_id) {
+      errors.campuses = 'Debe seleccionar una sede';
       isValid = false;
     }
 
@@ -184,7 +206,9 @@ export default function Users() {
     e.preventDefault();
 
     // Validate form
-    if (!validateForm()) {
+    const isValid = validateForm();
+    
+    if (!isValid) {
       return;
     }
 
@@ -197,7 +221,7 @@ export default function Users() {
         phone: formData.phone,
         is_active: true,
         role_ids: formData.role_ids,
-        campus_ids: formData.campus_ids,
+        campus_id: formData.campus_id,
       };
       updateMutation.mutate({ id: editingUser.id, data: updateData });
     } else {
@@ -221,12 +245,10 @@ export default function Users() {
     }));
   };
 
-  const handleCampusToggle = (campusId: string) => {
+  const handleCampusSelect = (campusId: string) => {
     setFormData(prev => ({
       ...prev,
-      campus_ids: prev.campus_ids.includes(campusId)
-        ? prev.campus_ids.filter(id => id !== campusId)
-        : [...prev.campus_ids, campusId]
+      campus_id: campusId
     }));
   };
 
@@ -234,7 +256,27 @@ export default function Users() {
     return (
       <Layout>
         <div className="flex items-center justify-center h-64">
-          <div className="text-gray-500">Cargando usuarios...</div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (usersError) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <AlertCircle className="w-12 h-12 text-red-500" />
+          <div className="text-red-600 font-medium">Error al cargar usuarios</div>
+          <div className="text-gray-500 text-sm max-w-md text-center">
+            {usersError instanceof Error ? usersError.message : 'Error desconocido'}
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+          >
+            Reintentar
+          </button>
         </div>
       </Layout>
     );
@@ -296,7 +338,7 @@ export default function Users() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {usersData?.items.map((user) => (
+              {usersData?.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <div className="flex items-start gap-3">
@@ -304,7 +346,7 @@ export default function Users() {
                         <UsersIcon className="w-5 h-5 text-indigo-600" />
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900">{user.full_name}</div>
+                        <div className="font-medium text-gray-900">{user.full_name || user.email}</div>
                         <div className="text-sm text-gray-500 flex items-center gap-1 mt-1">
                           <Mail className="w-3 h-3" />
                           {user.email}
@@ -315,38 +357,32 @@ export default function Users() {
                             {user.phone}
                           </div>
                         )}
-                        {user.is_teacher && (
-                          <div className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded mt-1 inline-block">
-                            Profesor {user.teacher_code && `- ${user.teacher_code}`}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-1">
-                      {user.roles.map((role) => (
+                      {user.role && (
                         <span
-                          key={role}
                           className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700"
                         >
                           <Shield className="w-3 h-3" />
-                          {role}
+                          {user.role}
                         </span>
-                      ))}
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-1">
-                      {user.campuses.map((campus) => (
+                      {user.campus_id ? (
                         <span
-                          key={campus.id}
                           className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700"
                         >
-                          {campus.name}
-                          {campus.is_primary && ' ⭐'}
+                          {campusesData?.find(c => c.id === user.campus_id)?.name || 'Sede no encontrada'}
                         </span>
-                      ))}
+                      ) : (
+                        <span className="text-gray-400 text-xs">Sin sede</span>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -372,7 +408,6 @@ export default function Users() {
                       onClick={() => handleDelete(user.id)}
                       className="text-red-600 hover:text-red-900"
                       title="Desactivar"
-                      disabled={user.is_superuser}
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
@@ -452,6 +487,7 @@ export default function Users() {
                               type="text"
                               required
                               minLength={3}
+                              autoComplete="new-username"
                               value={formData.username}
                               onChange={(e) => {
                                 setFormData({ ...formData, username: e.target.value });
@@ -494,6 +530,7 @@ export default function Users() {
                               type="password"
                               required
                               minLength={8}
+                              autoComplete="new-password"
                               value={formData.password}
                               onChange={(e) => {
                                 setFormData({ ...formData, password: e.target.value });
@@ -622,33 +659,34 @@ export default function Users() {
                   {/* Campuses */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Sedes * (selecciona al menos una)
+                      Sede *
                     </label>
-                    {formData.campus_ids.length === 0 ? (
+                    {!formData.campus_id ? (
                       <div className="flex items-center gap-2 mb-2 text-red-600 text-xs bg-red-50 p-3 rounded-lg border border-red-200">
                         <AlertCircle className="w-4 h-4 flex-shrink-0" />
                         <div>
-                          <span className="font-bold">Error:</span> Debes seleccionar al menos una sede para continuar
+                          <span className="font-bold">Error:</span> Debes seleccionar una sede para continuar
                         </div>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 mb-2 text-green-600 text-xs bg-green-50 p-3 rounded-lg border border-green-200">
                         <CheckCircle className="w-4 h-4 flex-shrink-0" />
                         <div>
-                          <span className="font-bold">Válido:</span> {formData.campus_ids.length} sede(s) seleccionada(s)
+                          <span className="font-bold">Válido:</span> Sede seleccionada
                         </div>
                       </div>
                     )}
                     <div className={`grid grid-cols-2 gap-2 p-3 rounded-lg border-2 ${
-                      formData.campus_ids.length === 0 ? 'border-red-300 bg-red-50' : 'border-green-300 bg-green-50'
+                      !formData.campus_id ? 'border-red-300 bg-red-50' : 'border-green-300 bg-green-50'
                     }`}>
                       {campusesData?.map((campus) => (
                         <label key={campus.id} className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-white bg-white">
                           <input
-                            type="checkbox"
-                            checked={formData.campus_ids.includes(campus.id)}
+                            type="radio"
+                            name="campus"
+                            checked={formData.campus_id === campus.id}
                             onChange={() => {
-                              handleCampusToggle(campus.id);
+                              handleCampusSelect(campus.id);
                               setValidationErrors({ ...validationErrors, campuses: '' });
                             }}
                           />
@@ -661,33 +699,9 @@ export default function Users() {
                     </div>
                   </div>
 
-                  {/* Teacher Info */}
-                  <div className="border-t pt-4">
-                    <label className="flex items-center gap-2 mb-3">
-                      <input
-                        type="checkbox"
-                        checked={formData.is_teacher}
-                        onChange={(e) => setFormData({ ...formData, is_teacher: e.target.checked })}
-                      />
-                      <span className="text-sm font-medium text-gray-700">
-                        Este usuario es profesor
-                      </span>
-                    </label>
-
-                    {formData.is_teacher && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Código de Profesor
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.teacher_code}
-                          onChange={(e) => setFormData({ ...formData, teacher_code: e.target.value })}
-                          placeholder="Ej: PROF-001"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        />
-                      </div>
-                    )}
+                  {/* Info adicional - Profesor se maneja en Roles */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                    <p><strong>Nota:</strong> Si el usuario es profesor, selecciona el rol "Profesor" en la sección de Roles arriba.</p>
                   </div>
 
                   {/* Actions */}

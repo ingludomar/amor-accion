@@ -47,7 +47,6 @@ export default function Campuses() {
     mutationFn: ({ id, data }: { id: string; data: any }) =>
       campusAPI.update(id, data),
     onSuccess: () => {
-      console.log('Update successful, closing modal');
       queryClient.invalidateQueries({ queryKey: ['campuses'] });
       closeModal();
     },

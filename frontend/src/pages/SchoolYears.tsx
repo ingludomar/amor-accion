@@ -2,13 +2,10 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit2, Trash2, Calendar, CheckCircle2, X } from 'lucide-react';
 import Layout from '../components/Layout';
-import { schoolYearAPI, type SchoolYear, type CreateSchoolYearRequest, type UpdateSchoolYearRequest } from '../lib/api';
-import { useAuthStore } from '../store/authStore';
-
+import { schoolYearAPI, type SchoolYear, type CreateSchoolYearRequest, type UpdateSchoolYearRequest } from '../lib/supabaseApi';
 export default function SchoolYears() {
   const queryClient = useQueryClient();
-  const { user } = useAuthStore();
-  const campusId = user?.campuses?.[0]?.id || '';
+  const campusId = '00000000-0000-0000-0000-000000000001';
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -18,8 +15,8 @@ export default function SchoolYears() {
   const { data: schoolYears = [], isLoading } = useQuery({
     queryKey: ['school-years', campusId],
     queryFn: async () => {
-      const response = await schoolYearAPI.list(campusId);
-      return response.data.data;
+      const { data } = await schoolYearAPI.list(campusId);
+      return data;
     },
   });
 
@@ -37,7 +34,7 @@ export default function SchoolYears() {
 
   // Update mutation
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: UpdateSchoolYearRequest }) =>
+    mutationFn: ({ id, data }: { id: string; data: UpdateSchoolYearRequest }) =>
       schoolYearAPI.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['school-years'] });
@@ -115,7 +112,7 @@ export default function SchoolYears() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {schoolYears.map((schoolYear) => (
+            {schoolYears.map((schoolYear: SchoolYear) => (
               <div
                 key={schoolYear.id}
                 className={`bg-white rounded-lg shadow p-6 border-2 ${
@@ -208,6 +205,7 @@ function CreateSchoolYearModal({
     start_date: '',
     end_date: '',
     is_current: false,
+    is_active: true,
   });
 
   const handleSubmit = (e: React.FormEvent) => {

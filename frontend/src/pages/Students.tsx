@@ -22,15 +22,6 @@ import {
 } from 'lucide-react';
 
 export default function Students() {
-  // TEST: Auto-open modal on first render if there are students
-  useEffect(() => {
-    // Simular click después de 2 segundos si hay estudiantes
-    const timer = setTimeout(() => {
-      console.log('Students page loaded - checking for students');
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
-
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCampus, setSelectedCampus] = useState<string>('');
