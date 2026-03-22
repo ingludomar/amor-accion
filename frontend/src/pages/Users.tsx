@@ -45,14 +45,14 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
-interface FormData {
+interface UserFormData {
   full_name: string;
   email: string;
   password: string;
   role: RoleKey;
 }
 
-const emptyForm: FormData = {
+const emptyForm: UserFormData = {
   full_name: '',
   email: '',
   password: '',
@@ -64,11 +64,11 @@ export default function UsersPage() {
   const [filterRole, setFilterRole] = useState<RoleKey | 'all'>('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<UserDetail | null>(null);
-  const [form, setForm] = useState<FormData>(emptyForm);
+  const [form, setForm] = useState<UserFormData>(emptyForm);
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
 
-  const { data: users = [], isLoading } = useQuery<UserDetail[]>({
+  const { data: users = [], isLoading, isError, error: queryError } = useQuery<UserDetail[]>({
     queryKey: ['users'],
     queryFn: async () => {
       const res = await userAPI.getAll();
@@ -77,7 +77,7 @@ export default function UsersPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (f: FormData) => {
+    mutationFn: async (f: UserFormData) => {
       return userAPI.create({
         email: f.email,
         password: f.password,
@@ -93,7 +93,7 @@ export default function UsersPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, f }: { id: string; f: FormData }) => {
+    mutationFn: async ({ id, f }: { id: string; f: UserFormData }) => {
       return userAPI.update(id, {
         full_name: f.full_name,
         role_ids: [f.role],
@@ -195,10 +195,17 @@ export default function UsersPage() {
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
           </div>
+        ) : isError ? (
+          <div className="card p-6 text-center">
+            <AlertCircle size={36} className="mx-auto mb-2 text-red-400" />
+            <p className="font-medium text-red-700 mb-1">Error al cargar usuarios</p>
+            <p className="text-sm text-gray-500">{(queryError as any)?.message || 'Error desconocido'}</p>
+            <p className="text-xs text-gray-400 mt-2">Verifica que la migración de permisos (profiles RLS) esté aplicada en Supabase</p>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="card p-8 text-center text-gray-500">
             <Users size={40} className="mx-auto mb-3 text-gray-300" />
-            <p>No hay usuarios</p>
+            <p>No hay usuarios registrados</p>
           </div>
         ) : (
           <div className="space-y-2">
