@@ -12,6 +12,17 @@ import {
   ChevronRight, GraduationCap, Pencil, Trash2, CreditCard, Users,
 } from 'lucide-react';
 
+// ─── Utilidades ──────────────────────────────────────────────────
+function calcAge(birthDate?: string): number | null {
+  if (!birthDate) return null;
+  const birth = new Date(birthDate + 'T00:00:00');
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
 // ─── Constantes ──────────────────────────────────────────────────
 const RELATIONSHIP_TYPES = [
   { value: 'padre',      label: 'Padre' },
@@ -354,7 +365,10 @@ export default function Students() {
                 <InfoItem label="Documento" value={`${activeStudent.document_type} ${activeStudent.document_number}`} />
               )}
               {activeStudent.birth_date && (
-                <InfoItem label="Nacimiento" value={new Date(activeStudent.birth_date + 'T00:00:00').toLocaleDateString('es-CO')} />
+                <InfoItem
+                  label="Nacimiento"
+                  value={`${new Date(activeStudent.birth_date + 'T00:00:00').toLocaleDateString('es-CO')} · ${calcAge(activeStudent.birth_date)} años`}
+                />
               )}
               {activeStudent.gender && (
                 <InfoItem label="Género" value={activeStudent.gender === 'male' ? 'Masculino' : 'Femenino'} />

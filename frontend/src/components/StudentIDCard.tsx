@@ -7,6 +7,16 @@ import { QRCodeSVG } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 import type { Student, Campus } from '../lib/api';
 
+function calcAge(birthDate?: string): number | null {
+  if (!birthDate) return null;
+  const birth = new Date(birthDate + 'T00:00:00');
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
 interface StudentIDCardProps {
   student: Student;
   campus: Campus;
@@ -162,11 +172,9 @@ export default function StudentIDCard({ student, campus, onClose }: StudentIDCar
                         <p className="text-base font-medium text-red-600">{student.blood_type || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide">Fecha de Nacimiento</p>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide">Edad</p>
                         <p className="text-base font-medium text-gray-900">
-                          {student.birth_date
-                            ? new Date(student.birth_date).toLocaleDateString('es-CO')
-                            : '—'}
+                          {student.birth_date ? `${calcAge(student.birth_date)} años` : '—'}
                         </p>
                       </div>
                     </div>
