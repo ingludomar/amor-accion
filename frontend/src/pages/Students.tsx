@@ -361,6 +361,9 @@ export default function Students() {
 
             {/* Datos */}
             <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              {activeStudent.campus_id && (
+                <InfoItem label="Sede" value={campuses.find((c: any) => c.id === activeStudent.campus_id)?.name || '—'} />
+              )}
               {activeStudent.document_type && activeStudent.document_number && (
                 <InfoItem label="Documento" value={`${activeStudent.document_type} ${activeStudent.document_number}`} />
               )}
@@ -577,6 +580,14 @@ export default function Students() {
                     {groups.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="label">Sede *</label>
+                <select required value={studentForm.campus_id} onChange={e => setStudentForm(f => ({ ...f, campus_id: e.target.value }))} className="input-field">
+                  <option value="">Seleccionar sede</option>
+                  {campuses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
               </div>
 
               <div>
