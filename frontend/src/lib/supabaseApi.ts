@@ -656,10 +656,235 @@ export const userAPI = {
   },
 };
 
+// ============================================
+// GRUPOS API
+// ============================================
+
+export interface Group {
+  id: string;
+  name: string;
+  description?: string;
+  teacher_id?: string;
+  teacher?: UserDetail;
+  is_active: boolean;
+  created_at: string;
+}
+
+export const groupAPI = {
+  getAll: async () => {
+    const { data, error } = await supabase
+      .from('groups')
+      .select('*, teacher:profiles(id, full_name, email)')
+      .eq('is_active', true)
+      .order('name');
+    if (error) throw error;
+    return { data: data || [], error: null };
+  },
+
+  update: async (id: string, updates: { teacher_id?: string | null }) => {
+    const { data, error } = await supabase
+      .from('groups')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return { data, error: null };
+  },
+};
+
+// ============================================
+// TEMAS API
+// ============================================
+
+export interface Topic {
+  id: string;
+  title: string;
+  description?: string;
+  group_id: string;
+  group?: Group;
+  planned_date: string;
+  actual_date?: string;
+  is_done: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CreateTopicRequest = Omit<Topic, 'id' | 'created_at' | 'updated_at' | 'group' | 'is_done'>;
+export type UpdateTopicRequest = Partial<Omit<Topic, 'id' | 'created_at' | 'group'>>;
+
+export const topicAPI = {
+  getAll: async (filters?: { group_id?: string; is_done?: boolean }) => {
+    let query = supabase
+      .from('topics')
+      .select('*, group:groups(id, name)')
+      .order('planned_date', { ascending: true });
+
+    if (filters?.group_id) query = query.eq('group_id', filters.group_id);
+    if (filters?.is_done !== undefined) query = query.eq('is_done', filters.is_done);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return { data: data || [], error: null };
+  },
+
+  create: async (topic: CreateTopicRequest) => {
+    const { data, error } = await supabase
+      .from('topics')
+      .insert({ ...topic, is_done: false })
+      .select('*, group:groups(id, name)')
+      .single();
+    if (error) throw error;
+    return { data, error: null };
+  },
+
+  update: async (id: string, topic: UpdateTopicRequest) => {
+    const { data, error } = await supabase
+      .from('topics')
+      .update({ ...topic, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('*, group:groups(id, name)')
+      .single();
+    if (error) throw error;
+    return { data, error: null };
+  },
+
+  delete: async (id: string) => {
+    const { error } = await supabase.from('topics').delete().eq('id', id);
+    if (error) throw error;
+    return { error: null };
+  },
+};
+
+// ============================================
+// SESIONES Y ASISTENCIA API
+// ============================================
+
+export interface ClassSession {
+  id: string;
+  group_id: string;
+  group?: Group;
+  topic_id?: string;
+  topic?: Topic;
+  teacher_id?: string;
+  session_date: string;
+  notes?: string;
+  created_at: string;
+}
+
+export type AttendanceStatus = 'presente' | 'ausente' | 'excusado';
+
+export interface AttendanceRecord {
+  id: string;
+  session_id: string;
+  student_id: string;
+  student?: Student;
+  status: AttendanceStatus;
+  notes?: string;
+  marked_at: string;
+}
+
+export const sessionAPI = {
+  getAll: async (filters?: { group_id?: string; date_from?: string; date_to?: string }) => {
+    let query = supabase
+      .from('class_sessions')
+      .select('*, group:groups(id, name), topic:topics(id, title)')
+      .order('session_date', { ascending: false });
+
+    if (filters?.group_id) query = query.eq('group_id', filters.group_id);
+    if (filters?.date_from) query = query.gte('session_date', filters.date_from);
+    if (filters?.date_to) query = query.lte('session_date', filters.date_to);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return { data: data || [], error: null };
+  },
+
+  create: async (session: Omit<ClassSession, 'id' | 'created_at' | 'group' | 'topic'>) => {
+    const { data, error } = await supabase
+      .from('class_sessions')
+      .insert(session)
+      .select('*, group:groups(id, name), topic:topics(id, title)')
+      .single();
+    if (error) throw error;
+    return { data, error: null };
+  },
+
+  getAttendance: async (sessionId: string) => {
+    const { data, error } = await supabase
+      .from('attendance_records')
+      .select('*, student:students(id, full_name, student_code, photo_url, group_id)')
+      .eq('session_id', sessionId);
+    if (error) throw error;
+    return { data: data || [], error: null };
+  },
+
+  markAttendance: async (sessionId: string, studentId: string, status: AttendanceStatus, notes?: string) => {
+    const { data, error } = await supabase
+      .from('attendance_records')
+      .upsert({ session_id: sessionId, student_id: studentId, status, notes, marked_at: new Date().toISOString() },
+               { onConflict: 'session_id,student_id' })
+      .select()
+      .single();
+    if (error) throw error;
+    return { data, error: null };
+  },
+};
+
+// ============================================
+// REPORTES API
+// ============================================
+
+export const reportAPI = {
+  byStudent: async (studentId: string, dateFrom: string, dateTo: string) => {
+    const { data, error } = await supabase
+      .from('attendance_records')
+      .select('*, session:class_sessions(session_date, group:groups(name))')
+      .eq('student_id', studentId)
+      .gte('session:class_sessions.session_date', dateFrom)
+      .lte('session:class_sessions.session_date', dateTo);
+    if (error) throw error;
+    return { data: data || [], error: null };
+  },
+
+  byGroup: async (groupId: string, dateFrom: string, dateTo: string) => {
+    const { data, error } = await supabase
+      .from('class_sessions')
+      .select(`
+        id, session_date, topic:topics(title),
+        attendance_records(status, student:students(id, full_name, student_code))
+      `)
+      .eq('group_id', groupId)
+      .gte('session_date', dateFrom)
+      .lte('session_date', dateTo)
+      .order('session_date');
+    if (error) throw error;
+    return { data: data || [], error: null };
+  },
+
+  general: async (dateFrom: string, dateTo: string) => {
+    const { data, error } = await supabase
+      .from('class_sessions')
+      .select(`
+        id, session_date, group:groups(name),
+        attendance_records(status)
+      `)
+      .gte('session_date', dateFrom)
+      .lte('session_date', dateTo)
+      .order('session_date');
+    if (error) throw error;
+    return { data: data || [], error: null };
+  },
+};
+
 export default {
   campusAPI,
   studentAPI,
   guardianAPI,
+  groupAPI,
+  topicAPI,
+  sessionAPI,
+  reportAPI,
   attendanceAPI,
   userAPI,
 };
