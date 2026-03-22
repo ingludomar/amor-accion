@@ -32,6 +32,8 @@ export interface Student {
   blood_type?: string;
   allergies?: string;
   campus_id: string;
+  group_id?: string;
+  group?: { id: string; name: string };
   email?: string;
   phone?: string;
   address?: string;
@@ -197,36 +199,34 @@ export const campusAPI = {
 // ============================================
 
 export const studentAPI = {
-  getAll: async (params?: { campus_id?: string; is_active?: boolean; search?: string }) => {
+  getAll: async (params?: { campus_id?: string; group_id?: string; is_active?: boolean; search?: string }) => {
     let query = supabase
       .from('students')
       .select(`
         *,
+        group:groups(id, name),
         student_guardians(
+          relationship_type,
+          is_primary,
           guardian:guardians(*)
         )
       `);
     
-    if (params?.campus_id) {
-      query = query.eq('campus_id', params.campus_id);
-    }
-    
-    if (params?.is_active !== undefined) {
-      query = query.eq('is_active', params.is_active);
-    }
-    
-    if (params?.search) {
-      query = query.or(`full_name.ilike.%${params.search}%,student_code.ilike.%${params.search}%`);
-    }
+    if (params?.campus_id) query = query.eq('campus_id', params.campus_id);
+    if (params?.group_id)  query = query.eq('group_id', params.group_id);
+    if (params?.is_active !== undefined) query = query.eq('is_active', params.is_active);
+    if (params?.search) query = query.or(`full_name.ilike.%${params.search}%,student_code.ilike.%${params.search}%`);
 
     const { data, error } = await query.order('full_name');
-    
     if (error) throw error;
-    
-    // Transformar datos para incluir guardians
+
     const transformedData = data?.map(student => ({
       ...student,
-      guardians: student.student_guardians?.map((sg: any) => sg.guardian) || []
+      guardians: student.student_guardians?.map((sg: any) => ({
+        ...sg.guardian,
+        relationship_type: sg.relationship_type,
+        is_primary: sg.is_primary,
+      })) || [],
     })) || [];
     
     return { data: transformedData, error: null };
