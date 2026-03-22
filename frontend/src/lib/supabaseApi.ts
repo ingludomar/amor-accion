@@ -83,28 +83,6 @@ export type UpdateGuardianRequest = Partial<CreateGuardianRequest>;
 // ATTENDANCE API
 // ============================================
 
-export interface AttendanceRecord {
-  id: string;
-  student_id: string;
-  class_session_id: string;
-  status: 'present' | 'absent' | 'late' | 'excused';
-  marked_by: string;
-  marked_at: string;
-  notes?: string;
-  student?: Student;
-}
-
-export interface ClassSession {
-  id: string;
-  course_group_id: string;
-  subject_id: string;
-  teacher_id: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  campus_id: string;
-}
-
 export enum Gender {
   MALE = 'male',
   FEMALE = 'female',
@@ -543,18 +521,17 @@ export const userAPI = {
   },
 
   getRoles: async () => {
-    // Since we don't have a roles table yet, return default roles
-    return { 
-      data: { 
+    return {
+      data: {
         data: {
           items: [
             { id: 'admin', name: 'Administrador', description: 'Acceso total al sistema' },
-            { id: 'user', name: 'Usuario', description: 'Usuario estándar' },
-            { id: 'teacher', name: 'Profesor', description: 'Puede tomar asistencia' }
+            { id: 'coordinador', name: 'Coordinador', description: 'Gestión de grupos y temas' },
+            { id: 'profesor', name: 'Profesor', description: 'Toma asistencia de su grupo' }
           ]
         }
-      }, 
-      error: null 
+      },
+      error: null
     };
   },
 
@@ -889,27 +866,3 @@ export default {
   userAPI,
 };
 
-// Additional types for Attendance
-export type SessionStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
-
-export interface CreateSessionRequest {
-  course_group_id?: string;
-  subject_id?: string;
-  teacher_id?: string;
-  period_id?: string;
-  session_date: string;
-  start_time: string;
-  end_time: string;
-  status?: SessionStatus;
-  topic?: string;
-  notes?: string;
-}
-
-export interface CreateAttendanceRequest {
-  class_session_id: string;
-  student_id: string;
-  status: AttendanceStatus;
-  arrival_time?: string;
-  notes?: string;
-}

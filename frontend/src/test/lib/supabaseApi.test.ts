@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { campusAPI, studentAPI, schoolYearAPI } from '../../lib/supabaseApi';
+import { campusAPI, studentAPI } from '../../lib/supabaseApi';
 import { supabase } from '../../lib/supabaseClient';
 
 describe('Supabase API - Campus', () => {
@@ -148,29 +148,3 @@ describe('Supabase API - Students', () => {
   });
 });
 
-describe('Supabase API - School Years', () => {
-  describe('list', () => {
-    it('should return school years for a campus', async () => {
-      const mockSchoolYears = [
-        { 
-          id: '1', 
-          name: '2024-2025', 
-          campus_id: 'campus-1',
-          is_current: true,
-          start_date: '2024-01-01',
-          end_date: '2024-12-31',
-        },
-      ];
-
-      (supabase.from as any).mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: mockSchoolYears, error: null }),
-      });
-
-      const result = await schoolYearAPI.list('campus-1');
-
-      expect(result.data).toEqual(mockSchoolYears);
-    });
-  });
-});

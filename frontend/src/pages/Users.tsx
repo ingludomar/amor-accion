@@ -1,769 +1,363 @@
 /**
- * User management page with CRUD operations
+ * User management - Admin, Coordinador, Profesor roles
  */
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
-import { userAPI, campusAPI } from '../lib/supabaseApi';
-import type { UserDetail, CreateUserRequest, UpdateUserRequest, Role, Campus } from '../lib/supabaseApi';
-import { Users as UsersIcon, Plus, Pencil, Trash2, X, Mail, Phone, Shield, AlertCircle, CheckCircle, Home, ChevronRight } from 'lucide-react';
+import { userAPI } from '../lib/supabaseApi';
+import type { UserDetail } from '../lib/supabaseApi';
+import {
+  Shield, Users, GraduationCap, Plus, Pencil, Eye, EyeOff,
+  X, ToggleLeft, ToggleRight, AlertCircle
+} from 'lucide-react';
 
-export default function Users() {
-  const navigate = useNavigate();
+type RoleKey = 'admin' | 'coordinador' | 'profesor';
+
+const ROLES: Record<RoleKey, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+  admin: {
+    label: 'Administrador',
+    color: 'text-red-700',
+    bg: 'bg-red-100',
+    icon: <Shield size={16} />,
+  },
+  coordinador: {
+    label: 'Coordinador',
+    color: 'text-blue-700',
+    bg: 'bg-blue-100',
+    icon: <Users size={16} />,
+  },
+  profesor: {
+    label: 'Profesor',
+    color: 'text-green-700',
+    bg: 'bg-green-100',
+    icon: <GraduationCap size={16} />,
+  },
+};
+
+function RoleBadge({ role }: { role: string }) {
+  const r = ROLES[role as RoleKey];
+  if (!r) return <span className="text-xs text-gray-400">{role}</span>;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${r.bg} ${r.color}`}>
+      {r.icon}
+      {r.label}
+    </span>
+  );
+}
+
+interface FormData {
+  full_name: string;
+  email: string;
+  password: string;
+  role: RoleKey;
+}
+
+const emptyForm: FormData = {
+  full_name: '',
+  email: '',
+  password: '',
+  role: 'profesor',
+};
+
+export default function UsersPage() {
   const queryClient = useQueryClient();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserDetail | null>(null);
-  const [formData, setFormData] = useState<CreateUserRequest>({
-    email: '',
-    username: '',
-    password: '',
-    full_name: '',
-    document_type: 'CC',
-    document_number: '',
-    phone: '',
-    role_ids: [],
-    campus_id: '', // Solo un campus
-  });
+  const [filterRole, setFilterRole] = useState<RoleKey | 'all'>('all');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<UserDetail | null>(null);
+  const [form, setForm] = useState<FormData>(emptyForm);
+  const [showPass, setShowPass] = useState(false);
+  const [error, setError] = useState('');
 
-  // Validation errors state
-  const [validationErrors, setValidationErrors] = useState({
-    username: '',
-    password: '',
-    roles: '',
-    campuses: '',
-  });
-
-  // Fetch users
-  const { data: usersData, isLoading: usersLoading, error: usersError } = useQuery({
+  const { data: users = [], isLoading } = useQuery<UserDetail[]>({
     queryKey: ['users'],
     queryFn: async () => {
-      try {
-        const response = await userAPI.getAll();
-        return response.data.data || [];
-      } catch (err) {
-        console.error('Error fetching users:', err);
-        throw err;
-      }
+      const res = await userAPI.getAll();
+      return res.data.data || [];
     },
   });
 
-  // Fetch roles
-  const { data: rolesData, error: rolesError } = useQuery({
-    queryKey: ['roles'],
-    queryFn: async () => {
-      try {
-        const response = await userAPI.getRoles();
-        return response.data.data.items as Role[];
-      } catch (err) {
-        console.error('Error fetching roles:', err);
-        throw err;
-      }
-    },
-  });
-
-  // Fetch campuses
-  const { data: campusesData, error: campusesError } = useQuery({
-    queryKey: ['campuses'],
-    queryFn: async () => {
-      try {
-        const response = await campusAPI.getAll();
-        return response.data?.data?.items || response.data || [];
-      } catch (err) {
-        console.error('Error fetching campuses:', err);
-        throw err;
-      }
-    },
-  });
-
-  // Create user mutation
   const createMutation = useMutation({
-    mutationFn: userAPI.create,
+    mutationFn: async (f: FormData) => {
+      return userAPI.create({
+        email: f.email,
+        password: f.password,
+        full_name: f.full_name,
+        role_ids: [f.role],
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       closeModal();
     },
-    onError: (error: any) => {
-      console.error('Error al crear usuario:', error);
-      alert('Error al crear usuario: ' + (error.message || 'Error desconocido'));
-    },
+    onError: (e: any) => setError(e?.message || 'Error al crear usuario'),
   });
 
-  // Update user mutation
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateUserRequest }) =>
-      userAPI.update(id, data),
+    mutationFn: async ({ id, f }: { id: string; f: FormData }) => {
+      return userAPI.update(id, {
+        full_name: f.full_name,
+        role_ids: [f.role],
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       closeModal();
     },
-    onError: (error: any) => {
-      console.error('Error al actualizar usuario:', error);
-      alert('Error al actualizar usuario: ' + (error.message || 'Error desconocido'));
-    },
+    onError: (e: any) => setError(e?.message || 'Error al actualizar usuario'),
   });
 
-  // Delete user mutation
-  const deleteMutation = useMutation({
-    mutationFn: userAPI.delete,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-    },
-    onError: (error: any) => {
-      console.error('Error al eliminar usuario:', error);
-      alert('Error al eliminar usuario: ' + (error.message || 'Error desconocido'));
-    },
+  const toggleActive = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      userAPI.update(id, { is_active }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   });
 
-  const openCreateModal = () => {
-    setEditingUser(null);
-    setFormData({
-      email: '',
-      username: '',
+  function openCreate() {
+    setEditing(null);
+    setForm(emptyForm);
+    setError('');
+    setShowPass(false);
+    setModalOpen(true);
+  }
+
+  function openEdit(u: UserDetail) {
+    setEditing(u);
+    setForm({
+      full_name: u.full_name || '',
+      email: u.email,
       password: '',
-      full_name: '',
-      document_type: 'CC',
-      document_number: '',
-      phone: '',
-      role_ids: [],
-      campus_id: '',
+      role: (u.role as RoleKey) || 'profesor',
     });
-    setIsModalOpen(true);
-  };
+    setError('');
+    setModalOpen(true);
+  }
 
-  const openEditModal = (user: UserDetail) => {
-    setEditingUser(user);
-    // Fix: user.role es string, no array. Convertir a array de IDs
-    const roleIds = user.role ? [user.role] : [];
+  function closeModal() {
+    setModalOpen(false);
+    setEditing(null);
+  }
 
-    setFormData({
-      email: user.email,
-      username: user.username || '',
-      password: '', // Don't show password in edit mode
-      full_name: user.full_name || '',
-      document_type: 'CC',
-      document_number: user.document_number || '',
-      phone: user.phone || '',
-      role_ids: roleIds,
-      campus_id: user.campus_id || '',
-    });
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingUser(null);
-    setValidationErrors({
-      username: '',
-      password: '',
-      roles: '',
-      campuses: '',
-    });
-  };
-
-  // Validate form fields
-  const validateForm = (): boolean => {
-    const errors = {
-      username: '',
-      password: '',
-      roles: '',
-      campuses: '',
-    };
-
-    let isValid = true;
-
-    // Validate username (only for new users)
-    if (!editingUser) {
-      if (formData.username.length < 3) {
-        errors.username = 'El usuario debe tener al menos 3 caracteres';
-        isValid = false;
-      }
-
-      // Validate password
-      if (formData.password.length < 8) {
-        errors.password = 'La contraseña debe tener al menos 8 caracteres';
-        isValid = false;
-      }
-    }
-
-    // Validate roles
-    if (formData.role_ids.length === 0) {
-      errors.roles = 'Debe seleccionar al menos un rol';
-      isValid = false;
-    }
-
-    // Validate campus
-    if (!formData.campus_id) {
-      errors.campuses = 'Debe seleccionar una sede';
-      isValid = false;
-    }
-
-    setValidationErrors(errors);
-    return isValid;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
-    // Validate form
-    const isValid = validateForm();
-    
-    if (!isValid) {
-      return;
-    }
-
-    if (editingUser) {
-      // Update user (exclude email, username, password)
-      const updateData: UpdateUserRequest = {
-        full_name: formData.full_name,
-        document_type: formData.document_type,
-        document_number: formData.document_number,
-        phone: formData.phone,
-        is_active: true,
-        role_ids: formData.role_ids,
-        campus_id: formData.campus_id,
-      };
-      updateMutation.mutate({ id: editingUser.id, data: updateData });
+    setError('');
+    if (!form.full_name.trim()) return setError('El nombre es obligatorio');
+    if (!editing) {
+      if (!form.email.trim()) return setError('El correo es obligatorio');
+      if (form.password.length < 8) return setError('La contraseña debe tener mínimo 8 caracteres');
+      createMutation.mutate(form);
     } else {
-      // Create new user
-      createMutation.mutate(formData);
+      updateMutation.mutate({ id: editing.id, f: form });
     }
-  };
-
-  const handleDelete = (userId: string) => {
-    if (window.confirm('¿Está seguro de desactivar este usuario?')) {
-      deleteMutation.mutate(userId);
-    }
-  };
-
-  const handleRoleToggle = (roleId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      role_ids: prev.role_ids.includes(roleId)
-        ? prev.role_ids.filter(id => id !== roleId)
-        : [...prev.role_ids, roleId]
-    }));
-  };
-
-  const handleCampusSelect = (campusId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      campus_id: campusId
-    }));
-  };
-
-  if (usersLoading) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-        </div>
-      </Layout>
-    );
   }
 
-  if (usersError) {
-    return (
-      <Layout>
-        <div className="flex flex-col items-center justify-center h-64 space-y-4">
-          <AlertCircle className="w-12 h-12 text-red-500" />
-          <div className="text-red-600 font-medium">Error al cargar usuarios</div>
-          <div className="text-gray-500 text-sm max-w-md text-center">
-            {usersError instanceof Error ? usersError.message : 'Error desconocido'}
-          </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-          >
-            Reintentar
-          </button>
-        </div>
-      </Layout>
-    );
-  }
+  const filtered = users.filter(u =>
+    filterRole === 'all' ? true : u.role === filterRole
+  );
+
+  const pending = createMutation.isPending || updateMutation.isPending;
 
   return (
     <Layout>
-      <div className="space-y-6">
-        {/* Breadcrumb Navigation */}
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-1 hover:text-blue-600 transition"
-          >
-            <Home size={16} />
-            Dashboard
-          </button>
-          <ChevronRight size={16} className="text-gray-400" />
-          <span className="text-gray-900 font-medium">Usuarios</span>
-        </div>
-
+      <div className="space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Gestión de Usuarios</h1>
-            <p className="text-gray-600 mt-1">
-              Administra usuarios, roles y permisos del sistema
-            </p>
+        <div className="page-header">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold">Usuarios</h1>
+              <p className="text-blue-100 text-sm mt-0.5">{users.length} usuarios registrados</p>
+            </div>
+            <button onClick={openCreate} className="flex items-center gap-2 bg-white text-blue-700 font-semibold px-4 py-2 rounded-xl text-sm shadow">
+              <Plus size={18} />
+              Nuevo
+            </button>
           </div>
-          <button
-            onClick={openCreateModal}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-          >
-            <Plus className="w-5 h-5" />
-            Nuevo Usuario
-          </button>
         </div>
 
-        {/* Users List */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Usuario
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Roles
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Sedes
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {usersData?.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-start gap-3">
-                      <div className="bg-indigo-100 p-2 rounded-lg">
-                        <UsersIcon className="w-5 h-5 text-indigo-600" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{user.full_name || user.email}</div>
-                        <div className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                          <Mail className="w-3 h-3" />
-                          {user.email}
-                        </div>
-                        {user.phone && (
-                          <div className="text-sm text-gray-500 flex items-center gap-1">
-                            <Phone className="w-3 h-3" />
-                            {user.phone}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {user.role && (
-                        <span
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700"
-                        >
-                          <Shield className="w-3 h-3" />
-                          {user.role}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {user.campus_id ? (
-                        <span
-                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700"
-                        >
-                          {campusesData?.find(c => c.id === user.campus_id)?.name || 'Sede no encontrada'}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400 text-xs">Sin sede</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                        user.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {user.is_active ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right space-x-2">
-                    <button
-                      onClick={() => openEditModal(user)}
-                      className="text-indigo-600 hover:text-indigo-900"
-                      title="Editar"
-                    >
-                      <Pencil className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(user.id)}
-                      className="text-red-600 hover:text-red-900"
-                      title="Desactivar"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Filter chips */}
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {(['all', 'admin', 'coordinador', 'profesor'] as const).map(r => (
+            <button
+              key={r}
+              onClick={() => setFilterRole(r)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition ${
+                filterRole === r
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 border border-gray-200'
+              }`}
+            >
+              {r === 'all' ? 'Todos' : ROLES[r].label}
+            </button>
+          ))}
         </div>
 
-        {/* Modal */}
-        {isModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-gray-900">
-                    {editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
-                  </h2>
-                  <button
-                    onClick={closeModal}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
+        {/* List */}
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="card p-8 text-center text-gray-500">
+            <Users size={40} className="mx-auto mb-3 text-gray-300" />
+            <p>No hay usuarios</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filtered.map(u => (
+              <div key={u.id} className={`card p-4 flex items-center gap-3 ${!u.is_active ? 'opacity-60' : ''}`}>
+                {/* Avatar */}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${ROLES[u.role as RoleKey]?.bg || 'bg-gray-100'}`}>
+                  <span className={`text-sm font-bold ${ROLES[u.role as RoleKey]?.color || 'text-gray-600'}`}>
+                    {(u.full_name || u.email).charAt(0).toUpperCase()}
+                  </span>
                 </div>
 
-                {!editingUser && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
-                    <p className="text-sm text-blue-800 font-medium mb-1">Requisitos:</p>
-                    <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
-                      <li>Usuario: mínimo 3 caracteres</li>
-                      <li>Contraseña: mínimo 8 caracteres</li>
-                      <li>Seleccionar al menos 1 rol</li>
-                      <li>Seleccionar al menos 1 sede</li>
-                    </ul>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 truncate">{u.full_name || '—'}</p>
+                  <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                  <div className="mt-1">
+                    <RoleBadge role={u.role} />
                   </div>
-                )}
+                </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  {/* Basic Info */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Nombre Completo *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.full_name}
-                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      />
-                    </div>
-
-                    {!editingUser && (
-                      <>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Email *
-                          </label>
-                          <input
-                            type="email"
-                            required
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Usuario * (mínimo 3 caracteres)
-                          </label>
-                          <div className="relative">
-                            <input
-                              type="text"
-                              required
-                              minLength={3}
-                              autoComplete="new-username"
-                              value={formData.username}
-                              onChange={(e) => {
-                                setFormData({ ...formData, username: e.target.value });
-                                if (e.target.value.length >= 3) {
-                                  setValidationErrors({ ...validationErrors, username: '' });
-                                }
-                              }}
-                              className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                                validationErrors.username || (formData.username && formData.username.length > 0 && formData.username.length < 3)
-                                  ? 'border-red-500 bg-red-50'
-                                  : formData.username.length >= 3
-                                  ? 'border-green-500 bg-green-50'
-                                  : 'border-gray-300'
-                              }`}
-                            />
-                            {formData.username && (
-                              <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                                {formData.username.length >= 3 ? (
-                                  <CheckCircle className="w-5 h-5 text-green-600" />
-                                ) : (
-                                  <AlertCircle className="w-5 h-5 text-red-600" />
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          {(validationErrors.username || (formData.username && formData.username.length > 0 && formData.username.length < 3)) && (
-                            <div className="flex items-center gap-1 mt-1 text-red-600 text-xs bg-red-50 p-2 rounded">
-                              <AlertCircle className="w-3 h-3" />
-                              <span className="font-medium">Error:</span> El usuario debe tener al menos 3 caracteres
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Contraseña * (mínimo 8 caracteres)
-                          </label>
-                          <div className="relative">
-                            <input
-                              type="password"
-                              required
-                              minLength={8}
-                              autoComplete="new-password"
-                              value={formData.password}
-                              onChange={(e) => {
-                                setFormData({ ...formData, password: e.target.value });
-                                if (e.target.value.length >= 8) {
-                                  setValidationErrors({ ...validationErrors, password: '' });
-                                }
-                              }}
-                              className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                                validationErrors.password || (formData.password && formData.password.length > 0 && formData.password.length < 8)
-                                  ? 'border-red-500 bg-red-50'
-                                  : formData.password.length >= 8
-                                  ? 'border-green-500 bg-green-50'
-                                  : 'border-gray-300'
-                              }`}
-                            />
-                            {formData.password && (
-                              <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                                {formData.password.length >= 8 ? (
-                                  <CheckCircle className="w-5 h-5 text-green-600" />
-                                ) : (
-                                  <AlertCircle className="w-5 h-5 text-red-600" />
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          {(validationErrors.password || (formData.password && formData.password.length > 0 && formData.password.length < 8)) && (
-                            <div className="flex items-center gap-1 mt-1 text-red-600 text-xs bg-red-50 p-2 rounded">
-                              <AlertCircle className="w-3 h-3" />
-                              <span className="font-medium">Error:</span> La contraseña debe tener al menos 8 caracteres
-                            </div>
-                          )}
-                          {formData.password.length >= 8 && (
-                            <div className="flex items-center gap-1 mt-1 text-green-600 text-xs bg-green-50 p-2 rounded">
-                              <CheckCircle className="w-3 h-3" />
-                              <span className="font-medium">Válido:</span> Contraseña cumple con los requisitos
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    )}
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tipo de Documento
-                      </label>
-                      <select
-                        value={formData.document_type}
-                        onChange={(e) => setFormData({ ...formData, document_type: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      >
-                        <option value="CC">Cédula de Ciudadanía</option>
-                        <option value="TI">Tarjeta de Identidad</option>
-                        <option value="CE">Cédula de Extranjería</option>
-                        <option value="PP">Pasaporte</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Número de Documento
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.document_number}
-                        onChange={(e) => setFormData({ ...formData, document_number: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      />
-                    </div>
-
-                    <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Teléfono
-                      </label>
-                      <input
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Roles */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Roles * (selecciona al menos uno)
-                    </label>
-                    {formData.role_ids.length === 0 ? (
-                      <div className="flex items-center gap-2 mb-2 text-red-600 text-xs bg-red-50 p-3 rounded-lg border border-red-200">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <div>
-                          <span className="font-bold">Error:</span> Debes seleccionar al menos un rol para continuar
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 mb-2 text-green-600 text-xs bg-green-50 p-3 rounded-lg border border-green-200">
-                        <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                        <div>
-                          <span className="font-bold">Válido:</span> {formData.role_ids.length} rol(es) seleccionado(s)
-                        </div>
-                      </div>
-                    )}
-                    <div className={`grid grid-cols-2 gap-2 p-3 rounded-lg border-2 ${
-                      formData.role_ids.length === 0 ? 'border-red-300 bg-red-50' : 'border-green-300 bg-green-50'
-                    }`}>
-                      {rolesData?.map((role) => (
-                        <label key={role.id} className="flex items-start gap-2 p-3 border rounded-lg cursor-pointer hover:bg-white bg-white">
-                          <input
-                            type="checkbox"
-                            checked={formData.role_ids.includes(role.id)}
-                            onChange={() => {
-                              handleRoleToggle(role.id);
-                              setValidationErrors({ ...validationErrors, roles: '' });
-                            }}
-                            className="mt-1"
-                          />
-                          <div>
-                            <div className="font-medium text-sm">{role.name}</div>
-                            <div className="text-xs text-gray-500">{role.description}</div>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Campuses */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Sede *
-                    </label>
-                    {!formData.campus_id ? (
-                      <div className="flex items-center gap-2 mb-2 text-red-600 text-xs bg-red-50 p-3 rounded-lg border border-red-200">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <div>
-                          <span className="font-bold">Error:</span> Debes seleccionar una sede para continuar
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 mb-2 text-green-600 text-xs bg-green-50 p-3 rounded-lg border border-green-200">
-                        <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                        <div>
-                          <span className="font-bold">Válido:</span> Sede seleccionada
-                        </div>
-                      </div>
-                    )}
-                    <div className={`grid grid-cols-2 gap-2 p-3 rounded-lg border-2 ${
-                      !formData.campus_id ? 'border-red-300 bg-red-50' : 'border-green-300 bg-green-50'
-                    }`}>
-                      {campusesData?.map((campus) => (
-                        <label key={campus.id} className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-white bg-white">
-                          <input
-                            type="radio"
-                            name="campus"
-                            checked={formData.campus_id === campus.id}
-                            onChange={() => {
-                              handleCampusSelect(campus.id);
-                              setValidationErrors({ ...validationErrors, campuses: '' });
-                            }}
-                          />
-                          <div>
-                            <div className="font-medium text-sm">{campus.name}</div>
-                            <div className="text-xs text-gray-500">{campus.code}</div>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Info adicional - Profesor se maneja en Roles */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                    <p><strong>Nota:</strong> Si el usuario es profesor, selecciona el rol "Profesor" en la sección de Roles arriba.</p>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-3 pt-4">
-                    <button
-                      type="button"
-                      onClick={closeModal}
-                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={createMutation.isPending || updateMutation.isPending}
-                      className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
-                    >
-                      {editingUser ? 'Actualizar' : 'Crear'} Usuario
-                    </button>
-                  </div>
-
-                  {/* Error Messages */}
-                  {(createMutation.isError || updateMutation.isError) && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <h4 className="text-red-800 font-medium mb-2">Error al guardar usuario</h4>
-                      <div className="text-red-600 text-sm">
-                        {(() => {
-                          const error = (createMutation.error || updateMutation.error) as any;
-                          const responseData = error?.response?.data;
-
-                          // Handle Pydantic validation errors
-                          if (responseData?.detail && Array.isArray(responseData.detail)) {
-                            return (
-                              <ul className="list-disc list-inside space-y-1">
-                                {responseData.detail.map((err: any, idx: number) => (
-                                  <li key={idx}>
-                                    <strong>{err.loc?.join(' → ') || 'Campo'}:</strong> {err.msg}
-                                  </li>
-                                ))}
-                              </ul>
-                            );
-                          }
-
-                          // Handle simple error message
-                          if (responseData?.message) {
-                            return <p>{responseData.message}</p>;
-                          }
-
-                          if (typeof responseData?.detail === 'string') {
-                            return <p>{responseData.detail}</p>;
-                          }
-
-                          return <p>Ocurrió un error al procesar la solicitud. Verifica los datos ingresados.</p>;
-                        })()}
-                      </div>
-                    </div>
-                  )}
-                </form>
+                {/* Actions */}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => openEdit(u)}
+                    className="p-2 text-gray-400 hover:text-blue-600 transition"
+                    title="Editar"
+                  >
+                    <Pencil size={18} />
+                  </button>
+                  <button
+                    onClick={() => toggleActive.mutate({ id: u.id, is_active: !u.is_active })}
+                    className={`p-2 transition ${u.is_active ? 'text-green-500 hover:text-gray-400' : 'text-gray-400 hover:text-green-500'}`}
+                    title={u.is_active ? 'Desactivar' : 'Activar'}
+                  >
+                    {u.is_active ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
+                  </button>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         )}
       </div>
+
+      {/* Bottom-sheet modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center bg-black/50">
+          <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto">
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-1 sm:hidden">
+              <div className="w-10 h-1 bg-gray-300 rounded-full" />
+            </div>
+
+            <div className="p-5">
+              {/* Title */}
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-bold text-gray-900">
+                  {editing ? 'Editar usuario' : 'Nuevo usuario'}
+                </h2>
+                <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
+                  <X size={22} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Full name */}
+                <div>
+                  <label className="label">Nombre completo *</label>
+                  <input
+                    className="input-field"
+                    type="text"
+                    placeholder="Juan García"
+                    value={form.full_name}
+                    onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))}
+                  />
+                </div>
+
+                {/* Email — only on create */}
+                {!editing && (
+                  <div>
+                    <label className="label">Correo electrónico *</label>
+                    <input
+                      className="input-field"
+                      type="email"
+                      placeholder="juan@ejemplo.com"
+                      value={form.email}
+                      onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                    />
+                  </div>
+                )}
+
+                {/* Password — only on create */}
+                {!editing && (
+                  <div>
+                    <label className="label">Contraseña * (mín. 8 caracteres)</label>
+                    <div className="relative">
+                      <input
+                        className="input-field pr-10"
+                        type={showPass ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        value={form.password}
+                        onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPass(p => !p)}
+                        className="absolute inset-y-0 right-3 flex items-center text-gray-400"
+                      >
+                        {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Role selector */}
+                <div>
+                  <label className="label">Rol *</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(Object.entries(ROLES) as [RoleKey, typeof ROLES[RoleKey]][]).map(([key, r]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setForm(p => ({ ...p, role: key }))}
+                        className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition ${
+                          form.role === key
+                            ? `border-current ${r.bg} ${r.color}`
+                            : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                        }`}
+                      >
+                        <span className={form.role === key ? r.color : 'text-gray-400'}>{r.icon}</span>
+                        <span className="text-xs font-medium leading-tight text-center">{r.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Error */}
+                {error && (
+                  <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm">
+                    <AlertCircle size={16} className="flex-shrink-0" />
+                    {error}
+                  </div>
+                )}
+
+                {/* Buttons */}
+                <div className="flex gap-3 pt-1">
+                  <button type="button" onClick={closeModal} className="btn-secondary flex-1">
+                    Cancelar
+                  </button>
+                  <button type="submit" disabled={pending} className="btn-primary flex-1">
+                    {pending ? 'Guardando…' : editing ? 'Guardar' : 'Crear usuario'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
