@@ -4,13 +4,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Login from './pages/Login';
+import Groups from './pages/Groups';
+import Topics from './pages/Topics';
+import Reports from './pages/Reports';
 import Dashboard from './pages/Dashboard';
 import Campuses from './pages/Campuses';
 import Users from './pages/Users';
 import Students from './pages/Students';
-import Families from './pages/Families';
-import Guardians from './pages/Guardians';
-import SchoolYears from './pages/SchoolYears';
 import Attendance from './pages/Attendance';
 import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -67,26 +67,26 @@ function App() {
             }
           />
           <Route
-            path="/families"
+            path="/groups"
             element={
               <ProtectedRoute>
-                <Families />
+                <Groups />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/guardians"
+            path="/topics"
             element={
               <ProtectedRoute>
-                <Guardians />
+                <Topics />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/school-years"
+            path="/reports"
             element={
               <ProtectedRoute>
-                <SchoolYears />
+                <Reports />
               </ProtectedRoute>
             }
           />

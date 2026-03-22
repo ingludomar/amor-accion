@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Layout from '../components/Layout';
 import ImageUpload from '../components/ImageUpload';
 import { uploadLogo } from '../lib/storageApi';
-import { Settings, Upload, CheckCircle } from 'lucide-react';
+import { Settings as SettingsIcon, Upload, CheckCircle } from 'lucide-react';
 
 export default function Settings() {
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -31,7 +31,7 @@ export default function Settings() {
         {/* Header */}
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center justify-center gap-3">
-            <Settings className="w-8 h-8 text-blue-600" />
+            <SettingsIcon className="w-8 h-8 text-blue-600" />
             Configuración
           </h1>
           <p className="text-gray-600 mt-2">

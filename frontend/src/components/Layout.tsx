@@ -2,20 +2,19 @@ import { ReactNode, useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { getLogoUrl } from '../lib/storageApi';
-import { 
-  LogOut, 
-  School, 
-  Building2, 
-  Users, 
-  ClipboardList, 
-  BarChart3, 
-  Calendar,
+import {
+  LogOut,
+  School,
+  Building2,
+  Users,
+  ClipboardList,
+  BarChart3,
+  BookOpen,
   Menu,
   X,
   ChevronRight,
   UserCircle,
   Settings,
-  Users,
   UserCheck
 } from 'lucide-react';
 
@@ -44,13 +43,12 @@ export default function Layout({ children }: LayoutProps) {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
-    { name: 'Sedes', href: '/campuses', icon: Building2 },
-    { name: 'Usuarios', href: '/users', icon: Users },
     { name: 'Estudiantes', href: '/students', icon: School },
-    { name: 'Familias', href: '/families', icon: Users },
-    { name: 'Padres/Acudientes', href: '/guardians', icon: UserCheck },
-    { name: 'Años Escolares', href: '/school-years', icon: Calendar },
+    { name: 'Grupos', href: '/groups', icon: Users },
+    { name: 'Temas', href: '/topics', icon: BookOpen },
     { name: 'Asistencia', href: '/attendance', icon: ClipboardList },
+    { name: 'Reportes', href: '/reports', icon: BarChart3 },
+    { name: 'Usuarios', href: '/users', icon: UserCheck },
     { name: 'Configuración', href: '/settings', icon: Settings },
   ];
 

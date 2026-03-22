@@ -32,6 +32,8 @@ export interface Student {
   blood_type?: string;
   allergies?: string;
   campus_id: string;
+  group_id?: string;
+  group?: { id: string; name: string };
   email?: string;
   phone?: string;
   address?: string;
@@ -72,177 +74,14 @@ export interface GuardianRelationship {
   guardian?: Guardian;
 }
 
-// ============================================
-// FAMILIES API - Feature-004
-// ============================================
-
-export interface Family {
-  id: string;
-  name?: string;
-  address?: string;
-  phone?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  students?: Student[];
-  guardians?: GuardianWithFamily[];
-}
-
-export interface GuardianWithFamily extends Guardian {
-  guardian_families?: {
-    relationship_type: string;
-    is_primary: boolean;
-  };
-}
-
-export interface StudentFamily {
-  id: string;
-  student_id: string;
-  family_id: string;
-  relationship_type: string;
-}
-
-export interface GuardianFamily {
-  id: string;
-  guardian_id: string;
-  family_id: string;
-  relationship_type: string;
-  is_primary: boolean;
-}
-
-export type CreateFamilyRequest = Omit<Family, 'id' | 'created_at' | 'updated_at' | 'students' | 'guardians'>;
-export type UpdateFamilyRequest = Partial<CreateFamilyRequest>;
 
 export type CreateGuardianRequest = Omit<Guardian, 'id' | 'full_name'>;
 export type UpdateGuardianRequest = Partial<CreateGuardianRequest>;
 
-// ============================================
-// SCHOOL YEARS API
-// ============================================
-
-export interface SchoolYear {
-  id: string;
-  name: string;
-  start_date: string;
-  end_date: string;
-  is_active: boolean;
-  is_current: boolean;
-  campus_id: string;
-  created_at: string;
-}
-
-export type CreateSchoolYearRequest = Omit<SchoolYear, 'id' | 'created_at'>;
-export type UpdateSchoolYearRequest = Partial<Omit<SchoolYear, 'id' | 'created_at'>>;
-
-export const schoolYearAPI = {
-  list: async (campusId: string) => {
-    const { data, error } = await supabase
-      .from('school_years')
-      .select('*')
-      .eq('campus_id', campusId)
-      .order('start_date', { ascending: false });
-    
-    if (error) throw error;
-    return { data: data || [], error: null };
-  },
-
-  getById: async (id: string) => {
-    const { data, error } = await supabase
-      .from('school_years')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) throw error;
-    return { data, error: null };
-  },
-
-  create: async (schoolYear: Omit<SchoolYear, 'id' | 'created_at'>) => {
-    const { data, error } = await supabase
-      .from('school_years')
-      .insert(schoolYear)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return { data, error: null };
-  },
-
-  update: async (id: string, schoolYear: Partial<SchoolYear>) => {
-    const { data, error } = await supabase
-      .from('school_years')
-      .update(schoolYear)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return { data, error: null };
-  },
-
-  delete: async (id: string) => {
-    const { error } = await supabase
-      .from('school_years')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-    return { error: null };
-  },
-
-  setCurrent: async (id: string) => {
-    // Primero desactivar todos los años actuales del campus
-    const { data: schoolYear } = await supabase
-      .from('school_years')
-      .select('campus_id')
-      .eq('id', id)
-      .single();
-    
-    if (schoolYear) {
-      await supabase
-        .from('school_years')
-        .update({ is_current: false })
-        .eq('campus_id', schoolYear.campus_id);
-    }
-    
-    // Luego activar el seleccionado
-    const { data, error } = await supabase
-      .from('school_years')
-      .update({ is_current: true })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return { data, error: null };
-  },
-};
 
 // ============================================
 // ATTENDANCE API
 // ============================================
-
-export interface AttendanceRecord {
-  id: string;
-  student_id: string;
-  class_session_id: string;
-  status: 'present' | 'absent' | 'late' | 'excused';
-  marked_by: string;
-  marked_at: string;
-  notes?: string;
-  student?: Student;
-}
-
-export interface ClassSession {
-  id: string;
-  course_group_id: string;
-  subject_id: string;
-  teacher_id: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  campus_id: string;
-}
 
 export enum Gender {
   MALE = 'male',
@@ -338,36 +177,34 @@ export const campusAPI = {
 // ============================================
 
 export const studentAPI = {
-  getAll: async (params?: { campus_id?: string; is_active?: boolean; search?: string }) => {
+  getAll: async (params?: { campus_id?: string; group_id?: string; is_active?: boolean; search?: string }) => {
     let query = supabase
       .from('students')
       .select(`
         *,
+        group:groups(id, name),
         student_guardians(
+          relationship_type,
+          is_primary,
           guardian:guardians(*)
         )
       `);
     
-    if (params?.campus_id) {
-      query = query.eq('campus_id', params.campus_id);
-    }
-    
-    if (params?.is_active !== undefined) {
-      query = query.eq('is_active', params.is_active);
-    }
-    
-    if (params?.search) {
-      query = query.or(`full_name.ilike.%${params.search}%,student_code.ilike.%${params.search}%`);
-    }
+    if (params?.campus_id) query = query.eq('campus_id', params.campus_id);
+    if (params?.group_id)  query = query.eq('group_id', params.group_id);
+    if (params?.is_active !== undefined) query = query.eq('is_active', params.is_active);
+    if (params?.search) query = query.or(`full_name.ilike.%${params.search}%,student_code.ilike.%${params.search}%`);
 
     const { data, error } = await query.order('full_name');
-    
     if (error) throw error;
-    
-    // Transformar datos para incluir guardians
+
     const transformedData = data?.map(student => ({
       ...student,
-      guardians: student.student_guardians?.map((sg: any) => sg.guardian) || []
+      guardians: student.student_guardians?.map((sg: any) => ({
+        ...sg.guardian,
+        relationship_type: sg.relationship_type,
+        is_primary: sg.is_primary,
+      })) || [],
     })) || [];
     
     return { data: transformedData, error: null };
@@ -461,44 +298,6 @@ export const studentAPI = {
     return { error: null };
   },
 
-  // Obtener hermanos (estudiantes con mismos padres/madre)
-  getSiblings: async (studentId: string) => {
-    // Primero obtener los padres/madre de este estudiante
-    const { data: studentGuardians } = await supabase
-      .from('student_guardians')
-      .select('guardian_id, relationship_type')
-      .eq('student_id', studentId)
-      .in('relationship_type', ['padre', 'madre']);
-
-    if (!studentGuardians || studentGuardians.length === 0) {
-      return { data: [], error: null };
-    }
-
-    const parentIds = studentGuardians.map(sg => sg.guardian_id);
-
-    // Buscar otros estudiantes que tengan los mismos padres/madre
-    const { data: siblingRelations } = await supabase
-      .from('student_guardians')
-      .select('student_id, relationship_type, guardian:guardians(*)')
-      .in('guardian_id', parentIds)
-      .neq('student_id', studentId)
-      .in('relationship_type', ['padre', 'madre']);
-
-    if (!siblingRelations || siblingRelations.length === 0) {
-      return { data: [], error: null };
-    }
-
-    // Obtener datos completos de los estudiantes hermanos
-    const siblingStudentIds = [...new Set(siblingRelations.map(sr => sr.student_id))];
-    
-    const { data: siblings, error } = await supabase
-      .from('students')
-      .select('*')
-      .in('id', siblingStudentIds);
-
-    if (error) throw error;
-    return { data: siblings || [], error: null };
-  },
 };
 
 // ============================================
@@ -545,191 +344,6 @@ export const guardianAPI = {
   },
 };
 
-// ============================================
-// FAMILIES API - Feature-004
-// ============================================
-
-export const familyAPI = {
-  getAll: async (search?: string) => {
-    let query = supabase
-      .from('families')
-      .select('*')
-      .order('name');
-    
-    if (search) {
-      query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    return { data: data || [], error: null };
-  },
-
-  getById: async (id: string) => {
-    const { data: family, error: familyError } = await supabase
-      .from('families')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (familyError) throw familyError;
-    
-    // Obtener estudiantes de la familia
-    const { data: studentFamilies } = await supabase
-      .from('student_families')
-      .select('*, student:students(*)')
-      .eq('family_id', id);
-    
-    // Obtener guardianes de la familia
-    const { data: guardianFamilies } = await supabase
-      .from('guardian_families')
-      .select('*, guardian:guardians(*)')
-      .eq('family_id', id);
-    
-    return { 
-      data: {
-        ...family,
-        students: studentFamilies?.map(sf => sf.student).filter(Boolean) || [],
-        guardians: guardianFamilies?.map(gf => ({
-          ...gf.guardian,
-          guardian_families: {
-            relationship_type: gf.relationship_type,
-            is_primary: gf.is_primary
-          }
-        })) || []
-      }, 
-      error: null 
-    };
-  },
-
-  create: async (family: CreateFamilyRequest) => {
-    const { data, error } = await supabase
-      .from('families')
-      .insert(family)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return { data, error: null };
-  },
-
-  update: async (id: string, family: UpdateFamilyRequest) => {
-    const { data, error } = await supabase
-      .from('families')
-      .update({ ...family, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return { data, error: null };
-  },
-
-  delete: async (id: string) => {
-    const { error } = await supabase
-      .from('families')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-    return { error };
-  },
-
-  // Asignar estudiante a familia
-  assignStudent: async (studentId: string, familyId: string, relationshipType: string = 'hijo') => {
-    const { data, error } = await supabase
-      .from('student_families')
-      .insert({ student_id: studentId, family_id: familyId, relationship_type: relationshipType })
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return { data, error: null };
-  },
-
-  // Desasignar estudiante de familia
-  unassignStudent: async (studentId: string, familyId: string) => {
-    const { error } = await supabase
-      .from('student_families')
-      .delete()
-      .eq('student_id', studentId)
-      .eq('family_id', familyId);
-    
-    if (error) throw error;
-    return { error };
-  },
-
-  // Asignar guardián a familia
-  assignGuardian: async (
-    guardianId: string, 
-    familyId: string, 
-    relationshipType: string, 
-    isPrimary: boolean = false
-  ) => {
-    const { data, error } = await supabase
-      .from('guardian_families')
-      .insert({ 
-        guardian_id: guardianId, 
-        family_id: familyId, 
-        relationship_type: relationshipType,
-        is_primary: isPrimary
-      })
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return { data, error: null };
-  },
-
-  // Desasignar guardián de familia
-  unassignGuardian: async (guardianId: string, familyId: string) => {
-    const { error } = await supabase
-      .from('guardian_families')
-      .delete()
-      .eq('guardian_id', guardianId)
-      .eq('family_id', familyId);
-    
-    if (error) throw error;
-    return { error };
-  },
-
-  // Obtener familias de un estudiante
-  getByStudent: async (studentId: string) => {
-    const { data, error } = await supabase
-      .from('student_families')
-      .select('*, family:families(*)')
-      .eq('student_id', studentId);
-    
-    if (error) throw error;
-    return { data: data || [], error: null };
-  },
-
-  // Obtener estudiantes sin familia (para asignar)
-  getUnassignedStudents: async (excludeFamilyId?: string) => {
-    let query = supabase
-      .from('students')
-      .select('id, student_code, first_name, last_name, full_name')
-      .eq('is_active', true);
-    
-    if (excludeFamilyId) {
-      const { data: assignedIds } = await supabase
-        .from('student_families')
-        .select('student_id')
-        .eq('family_id', excludeFamilyId);
-      
-      if (assignedIds && assignedIds.length > 0) {
-        const ids = assignedIds.map(i => i.student_id);
-        query = query.not('id', 'in', `(${ids.join(',')})`);
-      }
-    }
-    
-    const { data, error } = await query.order('full_name');
-    
-    if (error) throw error;
-    return { data: data || [], error: null };
-  },
-};
 
 // ============================================
 // ATTENDANCE API
@@ -907,18 +521,17 @@ export const userAPI = {
   },
 
   getRoles: async () => {
-    // Since we don't have a roles table yet, return default roles
-    return { 
-      data: { 
+    return {
+      data: {
         data: {
           items: [
             { id: 'admin', name: 'Administrador', description: 'Acceso total al sistema' },
-            { id: 'user', name: 'Usuario', description: 'Usuario estándar' },
-            { id: 'teacher', name: 'Profesor', description: 'Puede tomar asistencia' }
+            { id: 'coordinador', name: 'Coordinador', description: 'Gestión de grupos y temas' },
+            { id: 'profesor', name: 'Profesor', description: 'Toma asistencia de su grupo' }
           ]
         }
-      }, 
-      error: null 
+      },
+      error: null
     };
   },
 
@@ -1020,36 +633,236 @@ export const userAPI = {
   },
 };
 
+// ============================================
+// GRUPOS API
+// ============================================
+
+export interface Group {
+  id: string;
+  name: string;
+  description?: string;
+  teacher_id?: string;
+  teacher?: UserDetail;
+  is_active: boolean;
+  created_at: string;
+}
+
+export const groupAPI = {
+  getAll: async () => {
+    const { data, error } = await supabase
+      .from('groups')
+      .select('*, teacher:profiles(id, full_name, email)')
+      .eq('is_active', true)
+      .order('name');
+    if (error) throw error;
+    return { data: data || [], error: null };
+  },
+
+  update: async (id: string, updates: { teacher_id?: string | null }) => {
+    const { data, error } = await supabase
+      .from('groups')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return { data, error: null };
+  },
+};
+
+// ============================================
+// TEMAS API
+// ============================================
+
+export interface Topic {
+  id: string;
+  title: string;
+  description?: string;
+  group_id: string;
+  group?: Group;
+  planned_date: string;
+  actual_date?: string;
+  is_done: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CreateTopicRequest = Omit<Topic, 'id' | 'created_at' | 'updated_at' | 'group' | 'is_done'>;
+export type UpdateTopicRequest = Partial<Omit<Topic, 'id' | 'created_at' | 'group'>>;
+
+export const topicAPI = {
+  getAll: async (filters?: { group_id?: string; is_done?: boolean }) => {
+    let query = supabase
+      .from('topics')
+      .select('*, group:groups(id, name)')
+      .order('planned_date', { ascending: true });
+
+    if (filters?.group_id) query = query.eq('group_id', filters.group_id);
+    if (filters?.is_done !== undefined) query = query.eq('is_done', filters.is_done);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return { data: data || [], error: null };
+  },
+
+  create: async (topic: CreateTopicRequest) => {
+    const { data, error } = await supabase
+      .from('topics')
+      .insert({ ...topic, is_done: false })
+      .select('*, group:groups(id, name)')
+      .single();
+    if (error) throw error;
+    return { data, error: null };
+  },
+
+  update: async (id: string, topic: UpdateTopicRequest) => {
+    const { data, error } = await supabase
+      .from('topics')
+      .update({ ...topic, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('*, group:groups(id, name)')
+      .single();
+    if (error) throw error;
+    return { data, error: null };
+  },
+
+  delete: async (id: string) => {
+    const { error } = await supabase.from('topics').delete().eq('id', id);
+    if (error) throw error;
+    return { error: null };
+  },
+};
+
+// ============================================
+// SESIONES Y ASISTENCIA API
+// ============================================
+
+export interface ClassSession {
+  id: string;
+  group_id: string;
+  group?: Group;
+  topic_id?: string;
+  topic?: Topic;
+  teacher_id?: string;
+  session_date: string;
+  notes?: string;
+  created_at: string;
+}
+
+export type AttendanceStatus = 'presente' | 'ausente' | 'excusado';
+
+export interface AttendanceRecord {
+  id: string;
+  session_id: string;
+  student_id: string;
+  student?: Student;
+  status: AttendanceStatus;
+  notes?: string;
+  marked_at: string;
+}
+
+export const sessionAPI = {
+  getAll: async (filters?: { group_id?: string; date_from?: string; date_to?: string }) => {
+    let query = supabase
+      .from('class_sessions')
+      .select('*, group:groups(id, name), topic:topics(id, title)')
+      .order('session_date', { ascending: false });
+
+    if (filters?.group_id) query = query.eq('group_id', filters.group_id);
+    if (filters?.date_from) query = query.gte('session_date', filters.date_from);
+    if (filters?.date_to) query = query.lte('session_date', filters.date_to);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return { data: data || [], error: null };
+  },
+
+  create: async (session: Omit<ClassSession, 'id' | 'created_at' | 'group' | 'topic'>) => {
+    const { data, error } = await supabase
+      .from('class_sessions')
+      .insert(session)
+      .select('*, group:groups(id, name), topic:topics(id, title)')
+      .single();
+    if (error) throw error;
+    return { data, error: null };
+  },
+
+  getAttendance: async (sessionId: string) => {
+    const { data, error } = await supabase
+      .from('attendance_records')
+      .select('*, student:students(id, full_name, student_code, photo_url, group_id)')
+      .eq('session_id', sessionId);
+    if (error) throw error;
+    return { data: data || [], error: null };
+  },
+
+  markAttendance: async (sessionId: string, studentId: string, status: AttendanceStatus, notes?: string) => {
+    const { data, error } = await supabase
+      .from('attendance_records')
+      .upsert({ session_id: sessionId, student_id: studentId, status, notes, marked_at: new Date().toISOString() },
+               { onConflict: 'session_id,student_id' })
+      .select()
+      .single();
+    if (error) throw error;
+    return { data, error: null };
+  },
+};
+
+// ============================================
+// REPORTES API
+// ============================================
+
+export const reportAPI = {
+  byStudent: async (studentId: string, dateFrom: string, dateTo: string) => {
+    const { data, error } = await supabase
+      .from('attendance_records')
+      .select('*, session:class_sessions(session_date, group:groups(name))')
+      .eq('student_id', studentId)
+      .gte('session:class_sessions.session_date', dateFrom)
+      .lte('session:class_sessions.session_date', dateTo);
+    if (error) throw error;
+    return { data: data || [], error: null };
+  },
+
+  byGroup: async (groupId: string, dateFrom: string, dateTo: string) => {
+    const { data, error } = await supabase
+      .from('class_sessions')
+      .select(`
+        id, session_date, topic:topics(title),
+        attendance_records(status, student:students(id, full_name, student_code))
+      `)
+      .eq('group_id', groupId)
+      .gte('session_date', dateFrom)
+      .lte('session_date', dateTo)
+      .order('session_date');
+    if (error) throw error;
+    return { data: data || [], error: null };
+  },
+
+  general: async (dateFrom: string, dateTo: string) => {
+    const { data, error } = await supabase
+      .from('class_sessions')
+      .select(`
+        id, session_date, group:groups(name),
+        attendance_records(status)
+      `)
+      .gte('session_date', dateFrom)
+      .lte('session_date', dateTo)
+      .order('session_date');
+    if (error) throw error;
+    return { data: data || [], error: null };
+  },
+};
+
 export default {
   campusAPI,
   studentAPI,
   guardianAPI,
-  familyAPI,
+  groupAPI,
+  topicAPI,
+  sessionAPI,
+  reportAPI,
   attendanceAPI,
   userAPI,
 };
 
-// Additional types for Attendance
-export type SessionStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
-
-export interface CreateSessionRequest {
-  course_group_id?: string;
-  subject_id?: string;
-  teacher_id?: string;
-  period_id?: string;
-  session_date: string;
-  start_time: string;
-  end_time: string;
-  status?: SessionStatus;
-  topic?: string;
-  notes?: string;
-}
-
-export interface CreateAttendanceRequest {
-  class_session_id: string;
-  student_id: string;
-  status: AttendanceStatus;
-  arrival_time?: string;
-  notes?: string;
-}
