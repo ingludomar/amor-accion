@@ -5,15 +5,15 @@ import { Users, UserCheck, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 
 const GROUP_COLORS: Record<string, string> = {
-  'Niños':        'bg-blue-100 text-blue-800 border-blue-200',
-  'Jóvenes':      'bg-green-100 text-green-800 border-green-200',
-  'Adolescentes': 'bg-purple-100 text-purple-800 border-purple-200',
+  'Jardín':       'bg-blue-100 text-blue-800 border-blue-200',
+  'Infancia':     'bg-green-100 text-green-800 border-green-200',
+  'Pre-Juventud': 'bg-purple-100 text-purple-800 border-purple-200',
 };
 
 const GROUP_BG: Record<string, string> = {
-  'Niños':        'from-blue-500 to-blue-600',
-  'Jóvenes':      'from-green-500 to-green-600',
-  'Adolescentes': 'from-purple-500 to-purple-600',
+  'Jardín':       'from-blue-500 to-blue-600',
+  'Infancia':     'from-green-500 to-green-600',
+  'Pre-Juventud': 'from-purple-500 to-purple-600',
 };
 
 export default function Groups() {

@@ -25,9 +25,9 @@ const GENDERS        = [{ value: 'male', label: 'Masculino' }, { value: 'female'
 const BLOOD_TYPES    = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 const GROUP_COLORS: Record<string, string> = {
-  'Niños':        'bg-blue-100 text-blue-700',
-  'Jóvenes':      'bg-green-100 text-green-700',
-  'Adolescentes': 'bg-purple-100 text-purple-700',
+  'Jardín':       'bg-blue-100 text-blue-700',
+  'Infancia':     'bg-green-100 text-green-700',
+  'Pre-Juventud': 'bg-purple-100 text-purple-700',
 };
 
 // ─── Tipos locales ────────────────────────────────────────────────
