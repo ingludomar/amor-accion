@@ -651,22 +651,31 @@ export const groupAPI = {
   getAll: async () => {
     const { data, error } = await supabase
       .from('groups')
-      .select('*')
+      .select('*, group_teachers(teacher_id, teacher:profiles(id, full_name, email))')
       .eq('is_active', true)
       .order('name');
     if (error) throw error;
     return { data: data || [], error: null };
   },
 
-  update: async (id: string, updates: { teacher_id?: string | null }) => {
+  addTeacher: async (groupId: string, teacherId: string) => {
     const { data, error } = await supabase
-      .from('groups')
-      .update(updates)
-      .eq('id', id)
+      .from('group_teachers')
+      .insert({ group_id: groupId, teacher_id: teacherId })
       .select()
       .single();
     if (error) throw error;
     return { data, error: null };
+  },
+
+  removeTeacher: async (groupId: string, teacherId: string) => {
+    const { error } = await supabase
+      .from('group_teachers')
+      .delete()
+      .eq('group_id', groupId)
+      .eq('teacher_id', teacherId);
+    if (error) throw error;
+    return { error: null };
   },
 };
 
