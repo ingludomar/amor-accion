@@ -651,7 +651,7 @@ export const groupAPI = {
   getAll: async () => {
     const { data, error } = await supabase
       .from('groups')
-      .select('*, group_teachers(teacher_id, teacher:profiles(id, full_name, email))')
+      .select('*, group_teachers(teacher_id)')
       .eq('is_active', true)
       .order('name');
     if (error) throw error;

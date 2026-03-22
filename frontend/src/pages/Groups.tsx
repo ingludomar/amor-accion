@@ -20,7 +20,7 @@ export default function Groups() {
     queryKey: ['groups'],
     queryFn: async () => {
       const { data } = await groupAPI.getAll();
-      return data as (Group & { group_teachers: { teacher_id: string; teacher: { id: string; full_name: string; email: string } }[] })[];
+      return data as (Group & { group_teachers: { teacher_id: string }[] })[];
     },
   });
 
@@ -73,8 +73,8 @@ export default function Groups() {
                 badge: 'bg-gray-100 text-gray-800 border-gray-200',
                 gradient: 'from-gray-500 to-gray-600',
               };
-              const teachers = group.group_teachers || [];
-              const assignedIds = new Set(teachers.map(t => t.teacher_id));
+              const assignedIds = new Set((group.group_teachers || []).map(t => t.teacher_id));
+              const teachers = allTeachers.filter((t: any) => assignedIds.has(t.id));
               const available = allTeachers.filter((t: any) => !assignedIds.has(t.id));
               const isAdding = addingTo === group.id;
 
@@ -103,14 +103,14 @@ export default function Groups() {
                       <p className="text-sm text-gray-400 italic mb-2">Sin profesores asignados</p>
                     ) : (
                       <div className="flex flex-wrap gap-2 mb-2">
-                        {teachers.map(({ teacher_id, teacher }) => (
+                        {teachers.map((t: any) => (
                           <span
-                            key={teacher_id}
+                            key={t.id}
                             className="inline-flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1 text-sm font-medium text-gray-700 shadow-sm"
                           >
-                            {teacher?.full_name || teacher?.email || 'Profesor'}
+                            {t.full_name || t.email}
                             <button
-                              onClick={() => removeMutation.mutate({ groupId: group.id, teacherId: teacher_id })}
+                              onClick={() => removeMutation.mutate({ groupId: group.id, teacherId: t.id })}
                               className="text-gray-400 hover:text-red-500 transition"
                               title="Quitar"
                             >
