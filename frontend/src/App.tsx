@@ -8,9 +8,6 @@ import Dashboard from './pages/Dashboard';
 import Campuses from './pages/Campuses';
 import Users from './pages/Users';
 import Students from './pages/Students';
-import Families from './pages/Families';
-import Guardians from './pages/Guardians';
-import SchoolYears from './pages/SchoolYears';
 import Attendance from './pages/Attendance';
 import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -63,30 +60,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <Students />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/families"
-            element={
-              <ProtectedRoute>
-                <Families />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/guardians"
-            element={
-              <ProtectedRoute>
-                <Guardians />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/school-years"
-            element={
-              <ProtectedRoute>
-                <SchoolYears />
               </ProtectedRoute>
             }
           />

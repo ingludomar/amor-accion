@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
-import { studentAPI, campusAPI, familyAPI, guardianAPI, Student, CreateStudentRequest, Guardian, Family } from '../lib/supabaseApi';
+import { studentAPI, campusAPI, guardianAPI, Student, CreateStudentRequest, Guardian } from '../lib/supabaseApi';
 import { 
   Plus, 
   Search, 
@@ -48,15 +48,6 @@ export default function Students() {
     queryKey: ['campuses'],
     queryFn: async () => {
       const { data } = await campusAPI.getAll();
-      return data;
-    },
-  });
-
-  // Fetch families
-  const { data: families = [] } = useQuery({
-    queryKey: ['families'],
-    queryFn: async () => {
-      const { data } = await familyAPI.getAll();
       return data;
     },
   });
