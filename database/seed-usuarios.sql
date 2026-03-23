@@ -52,7 +52,7 @@ BEGIN
      NOW(), NOW(), NOW(),
      '{"provider":"email","providers":["email"]}', '{}', 'authenticated', 'authenticated')
 
-  ON CONFLICT (email) DO NOTHING;
+  ON CONFLICT (id) DO NOTHING;
 
   -- ── Insertar en profiles ────────────────────────────────
   INSERT INTO profiles (id, email, full_name, role, is_active, created_at, updated_at)

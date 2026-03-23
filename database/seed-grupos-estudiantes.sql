@@ -9,6 +9,7 @@
 -- PASO 1: Recrear grupos con nombres correctos
 -- ============================================================
 
+DELETE FROM students;
 DELETE FROM groups;
 
 INSERT INTO groups (id, name, description) VALUES
@@ -94,7 +95,7 @@ FROM (VALUES
   ('20260044', 'ANDY DANIEL',       'ORTEGA FERNANDEZ',      '2012-12-01', 'male',   'Infancia'),
   ('20260045', 'VICTORIA',          'DEL VALLE',             '2020-12-03', 'female', 'Jardín'),
   ('20260046', 'SOFIA CAROLINA',    'ROCHA BARRIOS',         '2009-12-09', 'female', 'Pre-Juventud'),
-  ('20260047', 'LEWIS',             'ORTEGA FERNANDEZ',      '2011-12-19', 'female', 'Pre-Juventud'),
+  ('20260047', 'LEWIS',             'ORTEGA FERNANDEZ',      '2011-12-19', 'male',   'Pre-Juventud'),
   ('20260048', 'VALERIA NICOL',     'ARGOTE HERRERA',        '2012-12-21', 'female', 'Infancia'),
   ('20260049', 'JONAIKEL',          'RUIZ ESTRADA',          '2016-12-28', 'male',   'Jardín'),
   ('20260050', 'JULIAN',            'OSORIO',                '2009-12-26', 'male',   'Pre-Juventud'),
