@@ -113,9 +113,45 @@ VITE_SUPABASE_ANON_KEY=tu-clave-anon
 
 ---
 
-## Deploy
+## Deploy y flujo de ramas
 
-El proyecto está conectado a Vercel. El deploy se activa automáticamente con cada push a `main`.
+### URLs
+- **Producción:** https://amor-accion.vercel.app — rama `main` (NO tocar directamente)
+- **Preview:** URL temporal generada por Vercel por cada rama distinta a `main`
+
+### Flujo obligatorio para cada feature
+
+```bash
+# 1. Siempre partir desde main actualizado
+git checkout main
+git pull origin main
+
+# 2. Crear rama para la feature
+git checkout -b dev-feature-nombre
+
+# 3. Desarrollar, commitear y publicar
+git add .
+git commit -m "feat: descripción"
+git push origin dev-feature-nombre
+# → Vercel genera URL de preview automáticamente
+
+# 4. El usuario verifica en la URL de preview
+# 5. Cuando confirma que funciona → merge a producción
+git checkout main
+git merge dev-feature-nombre
+git push origin main
+# → Se actualiza amor-accion.vercel.app
+
+# 6. Limpiar rama
+git branch -d dev-feature-nombre
+git push origin --delete dev-feature-nombre
+```
+
+### Reglas importantes
+- **Nunca** hacer push directo a `main` con features sin probar
+- Cada feature o corrección = su propia rama `dev-feature-*`
+- Solo mergear a `main` cuando el usuario confirme que la preview funciona
+- La URL de producción `amor-accion.vercel.app` es estable y no cambia
 
 Configurar en Vercel dashboard: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
 
