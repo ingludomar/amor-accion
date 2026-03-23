@@ -157,8 +157,23 @@ Configurar en Vercel dashboard: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
 
 ---
 
+## Estado actual de módulos
+
+| Módulo | Estado | Notas |
+|--------|--------|-------|
+| Login | ✅ Completo | |
+| Dashboard | ✅ Completo | |
+| Sedes (Campuses) | ✅ Completo | Logo, ciudad, activar/desactivar |
+| Usuarios | ✅ Completo | Roles: admin / coordinador / profesor |
+| Estudiantes | ✅ Completo | Foto, grupo, sede, acudientes, carnet con QR |
+| Acudientes | ✅ Completo | |
+| Grupos | ✅ Completo | Jardín / Infancia / Pre-Juventud, múltiples profesores por grupo |
+| Años escolares | ✅ Completo | |
+| Configuración | ✅ Completo | |
+| **Asistencia** | ⚠️ Incompleto | Página existe. Falta: crear sesiones, tomar asistencia por grupo, ver historial |
+| **Reportes** | ❌ Pendiente | No implementado |
+
 ## Lo que falta por implementar
 
-1. **Asistencia** — la página existe pero está incompleta. Falta: crear/gestionar sesiones de clase, tomar asistencia de la lista de estudiantes de un grupo, ver historial.
-2. **Grupos/Clases** — no existe todavía. Necesita tabla `course_groups` en Supabase + página.
-3. **Reportes** — ninguno implementado aún.
+1. **Asistencia** — la página existe pero está incompleta. Falta: crear/gestionar sesiones de clase, tomar asistencia de la lista de estudiantes de un grupo, ver historial de asistencia.
+2. **Reportes** — ninguno implementado aún. Posibles: asistencia por grupo, por estudiante, por fecha.
