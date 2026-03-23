@@ -41,6 +41,12 @@ export const useAuthStore = create<AuthState>()(
           }
 
           if (data.user) {
+            if (data.user.email !== 'admin@amoraccion.com') {
+              await signOut();
+              set({ error: 'Acceso no autorizado. Contacta al administrador.', isLoading: false });
+              return;
+            }
+
             const user = await getCurrentUser();
             set({
               user: user as User,

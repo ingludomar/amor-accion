@@ -102,9 +102,8 @@ export default function Login() {
 
         {/* Demo Credentials */}
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <p className="text-xs text-gray-600 font-medium mb-2">Credenciales de prueba:</p>
-          <p className="text-xs text-gray-500">Email: admin@colegio.edu</p>
-          <p className="text-xs text-gray-500">Contraseña: changeme123</p>
+          <p className="text-xs text-gray-600 font-medium mb-2">Acceso autorizado:</p>
+          <p className="text-xs text-gray-500">Email: admin@amoraccion.com</p>
         </div>
       </div>
     </div>
