@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { signIn, signOut, getCurrentUser } from '../lib/api';
+import { supabase, signIn, signOut, getCurrentUser } from '../lib/api';
+
+export interface Permission {
+  module: string;
+  can_view: boolean;
+  can_create: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+}
 
 interface User {
   id: string;
@@ -12,6 +20,7 @@ interface User {
 
 interface AuthState {
   user: User | null;
+  permissions: Permission[];
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -20,12 +29,24 @@ interface AuthState {
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   clearError: () => void;
+  hasPermission: (module: string, action: 'view' | 'create' | 'edit' | 'delete') => boolean;
+}
+
+async function loadPermissions(role: string): Promise<Permission[]> {
+  const { data, error } = await supabase
+    .from('role_permissions')
+    .select('*')
+    .eq('role_name', role);
+
+  if (error || !data) return [];
+  return data as Permission[];
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
+      permissions: [],
       isAuthenticated: false,
       isLoading: false,
       error: null,
@@ -34,22 +55,18 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const { data, error } = await signIn(email, password);
-          
+
           if (error) {
             set({ error: error.message, isLoading: false });
             return;
           }
 
           if (data.user) {
-            if (data.user.email !== 'admin@amoraccion.com') {
-              await signOut();
-              set({ error: 'Acceso no autorizado. Contacta al administrador.', isLoading: false });
-              return;
-            }
-
             const user = await getCurrentUser();
+            const permissions = await loadPermissions((user as User)?.role || '');
             set({
               user: user as User,
+              permissions,
               isAuthenticated: true,
               isLoading: false,
             });
@@ -66,6 +83,7 @@ export const useAuthStore = create<AuthState>()(
         await signOut();
         set({
           user: null,
+          permissions: [],
           isAuthenticated: false,
           error: null,
         });
@@ -74,19 +92,28 @@ export const useAuthStore = create<AuthState>()(
       checkAuth: async () => {
         const user = await getCurrentUser();
         if (user) {
-          set({ user: user as User, isAuthenticated: true });
+          const permissions = await loadPermissions((user as User)?.role || '');
+          set({ user: user as User, permissions, isAuthenticated: true });
         }
       },
 
       clearError: () => {
         set({ error: null });
       },
+
+      hasPermission: (module: string, action: 'view' | 'create' | 'edit' | 'delete') => {
+        const perm = get().permissions.find(p => p.module === module);
+        if (!perm) return false;
+        const map = { view: perm.can_view, create: perm.can_create, edit: perm.can_edit, delete: perm.can_delete };
+        return map[action] ?? false;
+      },
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ 
-        user: state.user, 
-        isAuthenticated: state.isAuthenticated 
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+        // No persistir permissions: se recargan en checkAuth
       }),
     }
   )

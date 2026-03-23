@@ -101,10 +101,6 @@ export default function Login() {
         </form>
 
         {/* Demo Credentials */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <p className="text-xs text-gray-600 font-medium mb-2">Acceso autorizado:</p>
-          <p className="text-xs text-gray-500">Email: admin@amoraccion.com</p>
-        </div>
       </div>
     </div>
   );

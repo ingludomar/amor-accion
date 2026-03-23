@@ -1,6 +1,7 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { usePermission } from '../hooks/usePermission';
 import { getLogoUrl } from '../lib/storageApi';
 import {
   LogOut,
@@ -15,7 +16,8 @@ import {
   ChevronRight,
   UserCircle,
   Settings,
-  UserCheck
+  UserCheck,
+  ShieldCheck
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -30,8 +32,18 @@ export default function Layout({ children }: LayoutProps) {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoError, setLogoError] = useState(false);
 
+  const dashboard  = usePermission('dashboard');
+  const campuses   = usePermission('campuses');
+  const students   = usePermission('students');
+  const groups     = usePermission('groups');
+  const topics     = usePermission('topics');
+  const attendance = usePermission('attendance');
+  const reports    = usePermission('reports');
+  const users      = usePermission('users');
+  const settings   = usePermission('settings');
+  const roles      = usePermission('roles');
+
   useEffect(() => {
-    // Cargar URL del logo
     const url = getLogoUrl();
     setLogoUrl(url);
   }, []);
@@ -41,16 +53,20 @@ export default function Layout({ children }: LayoutProps) {
     navigate('/login');
   };
 
-  const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
-    { name: 'Estudiantes', href: '/students', icon: School },
-    { name: 'Grupos', href: '/groups', icon: Users },
-    { name: 'Temas', href: '/topics', icon: BookOpen },
-    { name: 'Asistencia', href: '/attendance', icon: ClipboardList },
-    { name: 'Reportes', href: '/reports', icon: BarChart3 },
-    { name: 'Usuarios', href: '/users', icon: UserCheck },
-    { name: 'Configuración', href: '/settings', icon: Settings },
+  const allNavItems = [
+    { name: 'Dashboard',    href: '/dashboard', icon: BarChart3,    show: dashboard.canView },
+    { name: 'Estudiantes',  href: '/students',  icon: School,       show: students.canView },
+    { name: 'Grupos',       href: '/groups',    icon: Users,        show: groups.canView },
+    { name: 'Temas',        href: '/topics',    icon: BookOpen,     show: topics.canView },
+    { name: 'Asistencia',   href: '/attendance',icon: ClipboardList,show: attendance.canView },
+    { name: 'Reportes',     href: '/reports',   icon: BarChart3,    show: reports.canView },
+    { name: 'Sedes',        href: '/campuses',  icon: Building2,    show: campuses.canView },
+    { name: 'Usuarios',     href: '/users',     icon: UserCheck,    show: users.canView },
+    { name: 'Roles',        href: '/roles',     icon: ShieldCheck,  show: roles.canView },
+    { name: 'Configuración',href: '/settings',  icon: Settings,     show: settings.canView },
   ];
+
+  const navigation = allNavItems.filter(item => item.show);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
