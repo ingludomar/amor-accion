@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabaseClient';
 import Layout from '../components/Layout';
@@ -104,14 +104,17 @@ export default function Roles() {
   });
 
   // Cargar permisos del rol seleccionado
-  const { isLoading: loadingPerms } = useQuery({
+  const { isLoading: loadingPerms, data: permsData } = useQuery({
     queryKey: ['role_permissions', selectedRole],
     queryFn: () => fetchPermissions(selectedRole!),
     enabled: !!selectedRole,
-    onSuccess: (data) => {
-      setMatrix(buildPermissionMatrix(selectedRole!, data));
-    },
   });
+
+  useEffect(() => {
+    if (permsData && selectedRole) {
+      setMatrix(buildPermissionMatrix(selectedRole, permsData));
+    }
+  }, [permsData, selectedRole]);
 
   // Guardar permisos
   const saveMutation = useMutation({
