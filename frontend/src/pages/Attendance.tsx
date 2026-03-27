@@ -6,9 +6,11 @@ import { supabase } from '../lib/supabaseClient';
 import {
   ClipboardList, ChevronRight, CheckCircle2, XCircle, Clock,
   Users, Calendar, BookOpen, Play, RotateCcw, ChevronDown,
+  History, ChevronUp, Filter,
 } from 'lucide-react';
 
 // ─── Tipos locales ────────────────────────────────────────────────
+type Tab  = 'tomar' | 'historial';
 type Step = 'setup' | 'taking';
 
 interface SessionSetup {
@@ -23,11 +25,160 @@ const STATUS_CONFIG: Record<AttendanceStatus, { label: string; bg: string; activ
   excusado: { label: 'Excusado',  bg: 'bg-yellow-50 border-yellow-200', activeBg: 'bg-yellow-500', icon: Clock,        color: 'text-yellow-600' },
 };
 
+// ─── Componente Historial ─────────────────────────────────────────
+function HistorialView({ groups }: { groups: Group[] }) {
+  const [filterGroup, setFilterGroup] = useState('');
+  const [expandedId, setExpandedId]   = useState<string | null>(null);
+
+  const { data: sessions = [], isLoading } = useQuery({
+    queryKey: ['sessions-history', filterGroup],
+    queryFn: async () => {
+      const { data } = await sessionAPI.getAll(filterGroup ? { group_id: filterGroup } : undefined);
+      return data as ClassSession[];
+    },
+  });
+
+  const { data: detail = [] } = useQuery({
+    queryKey: ['session-detail', expandedId],
+    queryFn: async () => {
+      if (!expandedId) return [];
+      const { data } = await sessionAPI.getAttendance(expandedId);
+      return data;
+    },
+    enabled: !!expandedId,
+  });
+
+  const toggleExpand = (id: string) =>
+    setExpandedId(prev => (prev === id ? null : id));
+
+  const statsOf = (records: any[]) => ({
+    total:    records.length,
+    present:  records.filter(r => r.status === 'presente').length,
+    absent:   records.filter(r => r.status === 'ausente').length,
+    excused:  records.filter(r => r.status === 'excusado').length,
+  });
+
+  return (
+    <div className="space-y-4 max-w-2xl mx-auto">
+      {/* Filtro por grupo */}
+      <div className="card p-4 flex items-center gap-3">
+        <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        <select
+          value={filterGroup}
+          onChange={e => setFilterGroup(e.target.value)}
+          className="flex-1 text-sm border-0 outline-none bg-transparent text-gray-700"
+        >
+          <option value="">Todos los grupos</option>
+          {groups.map((g: any) => (
+            <option key={g.id} value={g.id}>{g.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+        </div>
+      ) : sessions.length === 0 ? (
+        <div className="card p-12 text-center text-gray-400">
+          <History className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+          <p>No hay sesiones registradas</p>
+        </div>
+      ) : (
+        <div className="space-y-2 pb-8">
+          {sessions.map((s: any) => {
+            const isOpen    = expandedId === s.id;
+            const records   = isOpen ? detail : [];
+            const stats     = statsOf(records);
+            const pct       = stats.total ? Math.round((stats.present / stats.total) * 100) : null;
+            const dateLabel = new Date(s.session_date + 'T00:00:00').toLocaleDateString('es-CO', {
+              weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+            });
+
+            return (
+              <div key={s.id} className="card overflow-hidden">
+                {/* Fila resumen */}
+                <button
+                  onClick={() => toggleExpand(s.id)}
+                  className="w-full p-4 flex items-center gap-3 text-left hover:bg-gray-50 transition"
+                >
+                  <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Calendar className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm capitalize">{dateLabel}</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {s.group?.name}
+                      {s.topic?.title ? ` · ${s.topic.title}` : ''}
+                    </p>
+                  </div>
+                  {isOpen && pct !== null && (
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                      pct >= 80 ? 'bg-green-100 text-green-700' :
+                      pct >= 50 ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-red-100 text-red-700'
+                    }`}>
+                      {pct}%
+                    </span>
+                  )}
+                  {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                           : <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+                </button>
+
+                {/* Detalle expandido */}
+                {isOpen && (
+                  <div className="border-t border-gray-100 px-4 pb-4 pt-3 space-y-3">
+                    {/* Stats */}
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                      <div className="bg-green-50 rounded-lg py-2">
+                        <p className="font-bold text-green-700">{stats.present}</p>
+                        <p className="text-green-500">Presentes</p>
+                      </div>
+                      <div className="bg-red-50 rounded-lg py-2">
+                        <p className="font-bold text-red-700">{stats.absent}</p>
+                        <p className="text-red-500">Ausentes</p>
+                      </div>
+                      <div className="bg-yellow-50 rounded-lg py-2">
+                        <p className="font-bold text-yellow-700">{stats.excused}</p>
+                        <p className="text-yellow-500">Excusados</p>
+                      </div>
+                    </div>
+
+                    {/* Lista estudiantes */}
+                    {records.length === 0 ? (
+                      <p className="text-xs text-center text-gray-400 py-2">Sin registros de asistencia</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {records.map((r: any) => {
+                          const cfg = STATUS_CONFIG[r.status as AttendanceStatus];
+                          const Icon = cfg?.icon ?? Clock;
+                          return (
+                            <div key={r.id} className="flex items-center gap-3 py-1.5">
+                              <Icon className={`w-4 h-4 flex-shrink-0 ${cfg?.color ?? 'text-gray-400'}`} />
+                              <span className="text-sm text-gray-800 flex-1">{r.student?.full_name}</span>
+                              <span className={`text-xs font-medium ${cfg?.color ?? 'text-gray-400'}`}>{cfg?.label}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Componente principal ─────────────────────────────────────────
 export default function Attendance() {
   const queryClient = useQueryClient();
   const today = new Date().toISOString().split('T')[0];
 
+  const [tab, setTab]                 = useState<Tab>('tomar');
   const [step, setStep]               = useState<Step>('setup');
   const [setup, setSetup]             = useState<SessionSetup>({ group_id: '', topic_id: '', session_date: today });
   const [activeSession, setActiveSession] = useState<ClassSession | null>(null);
@@ -157,6 +308,32 @@ export default function Attendance() {
 
   const selectedGroup = groups.find((g: any) => g.id === setup.group_id);
 
+  // ─── VISTA: HISTORIAL ─────────────────────────────────────────
+  if (tab === 'historial') {
+    return (
+      <Layout>
+        <div className="space-y-4">
+          <div className="page-header">
+            <h1 className="text-2xl font-bold flex items-center gap-3">
+              <ClipboardList className="w-7 h-7" /> Asistencia
+            </h1>
+          </div>
+          {/* Tabs */}
+          <div className="flex gap-2 bg-gray-100 p-1 rounded-xl w-fit">
+            <button onClick={() => setTab('tomar')}
+              className="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-700 transition">
+              Tomar asistencia
+            </button>
+            <button className="px-4 py-2 rounded-lg text-sm font-medium bg-white text-blue-600 shadow-sm">
+              Historial
+            </button>
+          </div>
+          <HistorialView groups={groups} />
+        </div>
+      </Layout>
+    );
+  }
+
   // ─── VISTA: CONFIGURACIÓN ─────────────────────────────────────
   if (step === 'setup') {
     return (
@@ -164,9 +341,19 @@ export default function Attendance() {
         <div className="space-y-5 max-w-lg mx-auto">
           <div className="page-header">
             <h1 className="text-2xl font-bold flex items-center gap-3">
-              <ClipboardList className="w-7 h-7" /> Tomar Asistencia
+              <ClipboardList className="w-7 h-7" /> Asistencia
             </h1>
             <p className="text-blue-100 text-sm mt-1">Configura la sesión antes de comenzar</p>
+          </div>
+          {/* Tabs */}
+          <div className="flex gap-2 bg-white/20 p-1 rounded-xl w-fit">
+            <button className="px-4 py-2 rounded-lg text-sm font-medium bg-white text-blue-600 shadow-sm">
+              Tomar asistencia
+            </button>
+            <button onClick={() => setTab('historial')}
+              className="px-4 py-2 rounded-lg text-sm font-medium text-white/80 hover:text-white transition flex items-center gap-1.5">
+              <History className="w-4 h-4" /> Historial
+            </button>
           </div>
 
           <div className="card p-5 space-y-5">
