@@ -79,10 +79,25 @@ export default function UsersPage() {
   function generateUsername(fullName: string): string {
     const parts = fullName.trim().split(/\s+/);
     if (parts.length < 2) return fullName.replace(/\s/g, '');
-    const firstName = parts[0];
-    const lastName = parts[parts.length - 1];
-    return firstName.charAt(0).toUpperCase() + lastName.charAt(0).toUpperCase() + lastName.slice(1).toLowerCase();
+    const first = parts[0];
+    const last = parts[parts.length - 1];
+    return first.charAt(0).toUpperCase() + last.charAt(0).toUpperCase() + last.slice(1).toLowerCase();
   }
+
+  function generateUniqueUsername(fullName: string, excludeId?: string): string {
+    const base = generateUsername(fullName);
+    const existing = users
+      .filter(u => !excludeId || u.id !== excludeId)
+      .map(u => u.username || '');
+    if (!existing.includes(base)) return base;
+    let counter = 2;
+    while (existing.includes(`${base}${counter}`)) counter++;
+    return `${base}${counter}`;
+  }
+
+  const previewUsername = !editing && form.full_name.trim().includes(' ')
+    ? generateUniqueUsername(form.full_name)
+    : null;
 
   const createMutation = useMutation({
     mutationFn: async (f: UserFormData) => {
@@ -90,7 +105,7 @@ export default function UsersPage() {
         email: f.email,
         password: f.password,
         full_name: f.full_name,
-        username: generateUsername(f.full_name),
+        username: generateUniqueUsername(f.full_name),
         role_ids: [f.role],
       });
     },
@@ -291,6 +306,17 @@ export default function UsersPage() {
                     onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))}
                   />
                 </div>
+
+                {/* Username preview — only on create */}
+                {!editing && previewUsername && (
+                  <div>
+                    <label className="label">Username generado</label>
+                    <div className="input-field bg-gray-50 text-gray-500 flex items-center justify-between">
+                      <span className="font-mono font-medium text-gray-700">{previewUsername}</span>
+                      <span className="text-xs text-gray-400">Generado automáticamente</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Email — only on create */}
                 {!editing && (
