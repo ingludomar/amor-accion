@@ -10,7 +10,7 @@
 ```
 ╔══════════════════════════════════════════════════════════════╗
 ║  AMOR ACCIÓN - SISTEMA DE ASISTENCIA                         ║
-║  Progreso General: 75%                                       ║
+║  Progreso General: 80%                                       ║
 ║  Estado: 🟢 En Producción / Desarrollo activo               ║
 ║  URL Producción: https://amor-accion.vercel.app              ║
 ║  Rama principal: main                                        ║
@@ -48,6 +48,7 @@
 | 2 | Username auto-generado en usuarios | dev-feature-auto-username | Mar 2026 |
 | 3 | Historial de asistencia + Sidebar nav | dev-feature-historial-asistencia | Mar 2026 |
 | 4 | Dashboard con datos reales | dev-feature-dashboard-real | Mar 2026 |
+| 5 | Cambio de contraseña | dev-feature-cambio-password | Mar 2026 |
 
 ---
 
@@ -57,7 +58,6 @@ Ver [BACKLOG.md](./BACKLOG.md) para el detalle completo.
 
 | # | Feature | Prioridad |
 |---|---------|-----------|
-| 5 | Cambio de contraseña | 🔴 Alta |
 | 6 | Sistema de calificaciones | 🔴 Alta |
 | 7 | Reportes + exportación PDF | 🟡 Media |
 | 8 | Escaneo QR en asistencia | 🟡 Media |
