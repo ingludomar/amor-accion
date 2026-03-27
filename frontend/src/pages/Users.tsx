@@ -76,12 +76,21 @@ export default function UsersPage() {
     },
   });
 
+  function generateUsername(fullName: string): string {
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length < 2) return fullName.replace(/\s/g, '');
+    const firstName = parts[0];
+    const lastName = parts[parts.length - 1];
+    return firstName.charAt(0).toUpperCase() + lastName.charAt(0).toUpperCase() + lastName.slice(1).toLowerCase();
+  }
+
   const createMutation = useMutation({
     mutationFn: async (f: UserFormData) => {
       return userAPI.create({
         email: f.email,
         password: f.password,
         full_name: f.full_name,
+        username: generateUsername(f.full_name),
         role_ids: [f.role],
       });
     },
