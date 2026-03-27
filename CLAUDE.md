@@ -155,6 +155,27 @@ git push origin --delete dev-feature-nombre
 
 Configurar en Vercel dashboard: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
 
+### Cómo obtener la URL de preview de Vercel
+
+Después de hacer `git push origin dev-feature-*`, ejecutar este comando para obtener la URL:
+
+```bash
+# 1. Obtener el ID del deployment de preview más reciente
+curl -s "https://api.github.com/repos/ingludomar/amor-accion/deployments?per_page=5&environment=Preview" \
+  | grep '"id"' | head -1
+
+# 2. Con ese ID, obtener la URL
+curl -s "https://api.github.com/repos/ingludomar/amor-accion/deployments/{ID}/statuses" \
+  | grep "target_url"
+```
+
+O en una sola línea (reemplaza `{ID}` con el resultado del primer comando):
+```bash
+ID=$(curl -s "https://api.github.com/repos/ingludomar/amor-accion/deployments?per_page=3&environment=Preview" | grep -m1 '"id":' | grep -o '[0-9]*') && curl -s "https://api.github.com/repos/ingludomar/amor-accion/deployments/$ID/statuses" | grep "target_url"
+```
+
+**Nota:** Requiere que `vercel.json` tenga `"github": { "enabled": true }`. Vercel tarda ~1-2 minutos en crear el deployment tras el push.
+
 ---
 
 ## Estado actual de módulos
