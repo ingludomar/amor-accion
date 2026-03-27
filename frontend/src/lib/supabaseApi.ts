@@ -926,6 +926,35 @@ export const gradeAPI = {
   },
 };
 
+// ============================================
+// GRADE SCALE API
+// ============================================
+
+export interface GradeScale {
+  score: number;
+  label: string;
+  color: string;
+}
+
+export const gradeScaleAPI = {
+  getAll: async (): Promise<GradeScale[]> => {
+    const { data, error } = await supabase
+      .from('grade_scale')
+      .select('*')
+      .order('score');
+    if (error) throw error;
+    return data as GradeScale[];
+  },
+
+  update: async (score: number, label: string, color: string): Promise<void> => {
+    const { error } = await supabase
+      .from('grade_scale')
+      .update({ label, color })
+      .eq('score', score);
+    if (error) throw error;
+  },
+};
+
 export default {
   campusAPI,
   studentAPI,
@@ -937,5 +966,6 @@ export default {
   attendanceAPI,
   userAPI,
   gradeAPI,
+  gradeScaleAPI,
 };
 

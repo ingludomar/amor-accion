@@ -3,11 +3,51 @@ import Layout from '../components/Layout';
 import ImageUpload from '../components/ImageUpload';
 import { uploadLogo } from '../lib/storageApi';
 import { supabase } from '../lib/supabaseClient';
-import { Settings as SettingsIcon, Upload, CheckCircle, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { gradeScaleAPI } from '../lib/supabaseApi';
+import { useGradeScale, COLOR_CLASSES } from '../hooks/useGradeScale';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Settings as SettingsIcon, Upload, CheckCircle, Lock, Eye, EyeOff, AlertCircle, Star } from 'lucide-react';
+
+const COLORS = ['red', 'orange', 'yellow', 'blue', 'green', 'purple', 'gray'];
 
 export default function Settings() {
+  const queryClient = useQueryClient();
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Escala de calificaciones
+  const { scale } = useGradeScale();
+  const [scaleEdits, setScaleEdits] = useState<Record<number, { label: string; color: string }>>({});
+  const [scaleSaving, setScaleSaving] = useState(false);
+  const [scaleSuccess, setScaleSuccess] = useState(false);
+
+  async function handleSaveScale() {
+    setScaleSaving(true);
+    setScaleSuccess(false);
+    try {
+      await Promise.all(
+        Object.entries(scaleEdits).map(([score, { label, color }]) =>
+          gradeScaleAPI.update(Number(score), label, color)
+        )
+      );
+      queryClient.invalidateQueries({ queryKey: ['grade-scale'] });
+      setScaleEdits({});
+      setScaleSuccess(true);
+    } finally {
+      setScaleSaving(false);
+    }
+  }
+
+  function editScale(score: number, field: 'label' | 'color', value: string) {
+    const current = scale.find(s => s.score === score);
+    setScaleEdits(p => ({
+      ...p,
+      [score]: {
+        label: field === 'label' ? value : (p[score]?.label ?? current?.label ?? ''),
+        color: field === 'color' ? value : (p[score]?.color ?? current?.color ?? 'gray'),
+      },
+    }));
+  }
 
   // Cambio de contraseña
   const [pwForm, setPwForm] = useState({ nueva: '', confirmar: '' });
@@ -221,6 +261,79 @@ export default function Settings() {
               {pwLoading ? 'Actualizando…' : 'Cambiar contraseña'}
             </button>
           </form>
+        </div>
+
+        {/* Escala de calificaciones */}
+        <div className="bg-white rounded-2xl shadow-card border border-gray-100 p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-amber-100 rounded-lg">
+              <Star className="w-6 h-6 text-amber-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Escala de calificaciones</h2>
+              <p className="text-sm text-gray-500">Define qué significa cada nota del 1 al 5</p>
+            </div>
+          </div>
+
+          {scaleSuccess && (
+            <div className="mb-5 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <p className="text-green-800 text-sm">Escala actualizada exitosamente.</p>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {scale.map(s => {
+              const edited = scaleEdits[s.score];
+              const label = edited?.label ?? s.label;
+              const color = edited?.color ?? s.color;
+              const cls = COLOR_CLASSES[color] ?? COLOR_CLASSES.gray;
+              return (
+                <div key={s.score} className="flex items-center gap-3">
+                  {/* Badge de número */}
+                  <span className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${cls.bg} ${cls.text}`}>
+                    {s.score}
+                  </span>
+
+                  {/* Label editable */}
+                  <input
+                    type="text"
+                    value={label}
+                    onChange={e => editScale(s.score, 'label', e.target.value)}
+                    className="input-field flex-1"
+                    placeholder={`Etiqueta para ${s.score}`}
+                  />
+
+                  {/* Selector de color */}
+                  <div className="flex gap-1.5 flex-shrink-0">
+                    {COLORS.map(c => {
+                      const cc = COLOR_CLASSES[c];
+                      return (
+                        <button
+                          key={c}
+                          onClick={() => editScale(s.score, 'color', c)}
+                          title={c}
+                          className={`w-6 h-6 rounded-full border-2 transition ${cc.bg} ${
+                            color === c ? 'border-gray-700 scale-110' : 'border-transparent'
+                          }`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {Object.keys(scaleEdits).length > 0 && (
+            <button
+              onClick={handleSaveScale}
+              disabled={scaleSaving}
+              className="btn-primary mt-5"
+            >
+              {scaleSaving ? 'Guardando…' : 'Guardar escala'}
+            </button>
+          )}
         </div>
 
         {/* Storage Info */}

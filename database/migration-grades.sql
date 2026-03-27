@@ -33,14 +33,12 @@ CREATE TRIGGER grades_updated_at
   BEFORE UPDATE ON grades
   FOR EACH ROW EXECUTE FUNCTION update_grades_updated_at();
 
--- RLS
+-- RLS grades
 ALTER TABLE grades ENABLE ROW LEVEL SECURITY;
 
--- Todos los usuarios autenticados pueden ver calificaciones
 CREATE POLICY "grades_select" ON grades
   FOR SELECT TO authenticated USING (true);
 
--- Solo usuarios autenticados pueden insertar/actualizar/eliminar
 CREATE POLICY "grades_insert" ON grades
   FOR INSERT TO authenticated WITH CHECK (true);
 
@@ -49,3 +47,33 @@ CREATE POLICY "grades_update" ON grades
 
 CREATE POLICY "grades_delete" ON grades
   FOR DELETE TO authenticated USING (true);
+
+-- ============================================
+-- Tabla de escala de calificaciones (parametrizable)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS grade_scale (
+  score  SMALLINT PRIMARY KEY CHECK (score BETWEEN 1 AND 5),
+  label  TEXT NOT NULL,
+  color  TEXT NOT NULL DEFAULT 'gray'
+);
+
+-- Valores por defecto
+INSERT INTO grade_scale (score, label, color) VALUES
+  (1, 'Deficiente',  'red'),
+  (2, 'Regular',     'orange'),
+  (3, 'Bueno',       'yellow'),
+  (4, 'Muy bueno',   'blue'),
+  (5, 'Excelente',   'green')
+ON CONFLICT (score) DO NOTHING;
+
+-- RLS grade_scale
+ALTER TABLE grade_scale ENABLE ROW LEVEL SECURITY;
+
+-- Todos los autenticados pueden leer
+CREATE POLICY "grade_scale_select" ON grade_scale
+  FOR SELECT TO authenticated USING (true);
+
+-- Solo admin puede modificar (via service_role o política permisiva para autenticados)
+CREATE POLICY "grade_scale_update" ON grade_scale
+  FOR UPDATE TO authenticated USING (true);

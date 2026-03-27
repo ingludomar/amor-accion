@@ -6,22 +6,16 @@ import {
   studentAPI, campusAPI, guardianAPI, groupAPI, gradeAPI,
   Student, Guardian, CreateStudentRequest,
 } from '../lib/supabaseApi';
+import { useGradeScale } from '../hooks/useGradeScale';
 import { supabase } from '../lib/supabaseClient';
 import {
   Plus, Search, X, Camera, UserPlus, Phone, MessageCircle,
   ChevronRight, GraduationCap, Pencil, Trash2, CreditCard, Users, Star,
 } from 'lucide-react';
 
-const SCORE_LABELS: Record<number, { label: string; color: string; bg: string }> = {
-  1: { label: 'Deficiente',  color: 'text-red-700',    bg: 'bg-red-100' },
-  2: { label: 'Regular',     color: 'text-orange-700', bg: 'bg-orange-100' },
-  3: { label: 'Bueno',       color: 'text-yellow-700', bg: 'bg-yellow-100' },
-  4: { label: 'Muy bueno',   color: 'text-blue-700',   bg: 'bg-blue-100' },
-  5: { label: 'Excelente',   color: 'text-green-700',  bg: 'bg-green-100' },
-};
-
 // ─── Componente de calificaciones del estudiante ─────────────────
 function StudentGrades({ studentId }: { studentId: string }) {
+  const { scaleMap } = useGradeScale();
   const { data: grades = [], isLoading } = useQuery({
     queryKey: ['grades-student', studentId],
     queryFn: () => gradeAPI.getByStudent(studentId),
@@ -42,10 +36,10 @@ function StudentGrades({ studentId }: { studentId: string }) {
       ) : (
         <div className="space-y-2">
           {grades.map((g: any) => {
-            const s = SCORE_LABELS[g.score];
+            const s = scaleMap[g.score] ?? { label: String(g.score), bg: 'bg-gray-100', text: 'text-gray-700' };
             return (
               <div key={g.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${s.bg} ${s.color}`}>
+                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${s.bg} ${s.text}`}>
                   {g.score}
                 </span>
                 <div className="flex-1 min-w-0">
@@ -53,7 +47,7 @@ function StudentGrades({ studentId }: { studentId: string }) {
                   <p className="text-xs text-gray-400">{g.topic?.group?.name}</p>
                   {g.notes && <p className="text-xs text-gray-500 italic">{g.notes}</p>}
                 </div>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${s.bg} ${s.color}`}>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${s.bg} ${s.text}`}>
                   {s.label}
                 </span>
               </div>

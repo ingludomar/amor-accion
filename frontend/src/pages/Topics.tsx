@@ -2,15 +2,8 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
 import { topicAPI, groupAPI, gradeAPI, studentAPI, Topic, CreateTopicRequest } from '../lib/supabaseApi';
+import { useGradeScale } from '../hooks/useGradeScale';
 import { BookOpen, Plus, Pencil, Trash2, X, Calendar, CheckCircle2, Clock, Star } from 'lucide-react';
-
-const SCORE_LABELS: Record<number, { label: string; color: string; bg: string }> = {
-  1: { label: 'Deficiente',  color: 'text-red-700',    bg: 'bg-red-100' },
-  2: { label: 'Regular',     color: 'text-orange-700', bg: 'bg-orange-100' },
-  3: { label: 'Bueno',       color: 'text-yellow-700', bg: 'bg-yellow-100' },
-  4: { label: 'Muy bueno',   color: 'text-blue-700',   bg: 'bg-blue-100' },
-  5: { label: 'Excelente',   color: 'text-green-700',  bg: 'bg-green-100' },
-};
 
 const STATUS_COLORS = {
   done:    'bg-green-100 text-green-800',
@@ -26,6 +19,8 @@ export default function Topics() {
   const [form, setForm] = useState<Partial<CreateTopicRequest>>({
     title: '', description: '', group_id: '', planned_date: '', actual_date: '',
   });
+
+  const { scaleMap } = useGradeScale();
 
   // Estado modal calificaciones
   const [gradingTopic, setGradingTopic] = useState<Topic | null>(null);
@@ -287,9 +282,9 @@ export default function Topics() {
                           <p className="text-sm font-medium text-gray-900 truncate">{s.full_name}</p>
                           <p className="text-xs text-gray-400">{s.student_code}</p>
                         </div>
-                        {current.score > 0 && (
-                          <span className={`ml-auto text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${SCORE_LABELS[current.score].bg} ${SCORE_LABELS[current.score].color}`}>
-                            {SCORE_LABELS[current.score].label}
+                        {current.score > 0 && scaleMap[current.score] && (
+                          <span className={`ml-auto text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${scaleMap[current.score].bg} ${scaleMap[current.score].text}`}>
+                            {scaleMap[current.score].label}
                           </span>
                         )}
                       </div>
@@ -300,9 +295,10 @@ export default function Topics() {
                           <button
                             key={n}
                             onClick={() => setScores(p => ({ ...p, [s.id]: { ...current, score: n } }))}
+                            title={scaleMap[n]?.label}
                             className={`flex-1 py-2 rounded-lg text-sm font-bold border-2 transition ${
                               current.score === n
-                                ? `${SCORE_LABELS[n].bg} ${SCORE_LABELS[n].color} border-current`
+                                ? `${scaleMap[n]?.bg ?? 'bg-gray-100'} ${scaleMap[n]?.text ?? 'text-gray-700'} border-current`
                                 : 'border-gray-200 text-gray-400 hover:border-gray-300'
                             }`}
                           >
