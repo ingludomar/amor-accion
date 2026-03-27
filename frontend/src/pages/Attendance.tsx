@@ -319,13 +319,13 @@ export default function Attendance() {
             </h1>
           </div>
           {/* Tabs */}
-          <div className="flex gap-2 bg-gray-100 p-1 rounded-xl w-fit">
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
             <button onClick={() => setTab('tomar')}
               className="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-700 transition">
               Tomar asistencia
             </button>
-            <button className="px-4 py-2 rounded-lg text-sm font-medium bg-white text-blue-600 shadow-sm">
-              Historial
+            <button className="px-4 py-2 rounded-lg text-sm font-medium bg-white text-blue-600 shadow-sm flex items-center gap-1.5">
+              <History className="w-4 h-4" /> Historial
             </button>
           </div>
           <HistorialView groups={groups} />
@@ -346,12 +346,12 @@ export default function Attendance() {
             <p className="text-blue-100 text-sm mt-1">Configura la sesión antes de comenzar</p>
           </div>
           {/* Tabs */}
-          <div className="flex gap-2 bg-white/20 p-1 rounded-xl w-fit">
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
             <button className="px-4 py-2 rounded-lg text-sm font-medium bg-white text-blue-600 shadow-sm">
               Tomar asistencia
             </button>
             <button onClick={() => setTab('historial')}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-white/80 hover:text-white transition flex items-center gap-1.5">
+              className="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-700 transition flex items-center gap-1.5">
               <History className="w-4 h-4" /> Historial
             </button>
           </div>

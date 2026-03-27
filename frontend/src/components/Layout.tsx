@@ -4,33 +4,19 @@ import { useAuthStore } from '../store/authStore';
 import { usePermission } from '../hooks/usePermission';
 import { getLogoUrl } from '../lib/storageApi';
 import {
-  LogOut,
-  School,
-  Building2,
-  Users,
-  ClipboardList,
-  BarChart3,
-  BookOpen,
-  Menu,
-  X,
-  ChevronRight,
-  UserCircle,
-  Settings,
-  UserCheck,
-  ShieldCheck
+  LogOut, School, Building2, Users, ClipboardList, BarChart3,
+  BookOpen, Menu, X, UserCircle, Settings, UserCheck, ShieldCheck,
 } from 'lucide-react';
 
-interface LayoutProps {
-  children: ReactNode;
-}
+interface LayoutProps { children: ReactNode; }
 
 export default function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuthStore();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [logoError, setLogoError] = useState(false);
+  const navigate         = useNavigate();
+  const location         = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [logoUrl, setLogoUrl]         = useState<string | null>(null);
+  const [logoError, setLogoError]     = useState(false);
 
   const dashboard  = usePermission('dashboard');
   const campuses   = usePermission('campuses');
@@ -43,170 +29,127 @@ export default function Layout({ children }: LayoutProps) {
   const settings   = usePermission('settings');
   const roles      = usePermission('roles');
 
-  useEffect(() => {
-    const url = getLogoUrl();
-    setLogoUrl(url);
-  }, []);
+  useEffect(() => { setLogoUrl(getLogoUrl()); }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const handleLogout = () => { logout(); navigate('/login'); };
 
   const allNavItems = [
-    { name: 'Dashboard',    href: '/dashboard', icon: BarChart3,    show: dashboard.canView },
-    { name: 'Estudiantes',  href: '/students',  icon: School,       show: students.canView },
-    { name: 'Grupos',       href: '/groups',    icon: Users,        show: groups.canView },
-    { name: 'Temas',        href: '/topics',    icon: BookOpen,     show: topics.canView },
-    { name: 'Asistencia',   href: '/attendance',icon: ClipboardList,show: attendance.canView },
-    { name: 'Reportes',     href: '/reports',   icon: BarChart3,    show: reports.canView },
-    { name: 'Sedes',        href: '/campuses',  icon: Building2,    show: campuses.canView },
-    { name: 'Usuarios',     href: '/users',     icon: UserCheck,    show: users.canView },
-    { name: 'Roles',        href: '/roles',     icon: ShieldCheck,  show: roles.canView },
-    { name: 'Configuración',href: '/settings',  icon: Settings,     show: settings.canView },
+    { name: 'Dashboard',     href: '/dashboard',  icon: BarChart3,    show: dashboard.canView },
+    { name: 'Estudiantes',   href: '/students',   icon: School,       show: students.canView },
+    { name: 'Grupos',        href: '/groups',     icon: Users,        show: groups.canView },
+    { name: 'Temas',         href: '/topics',     icon: BookOpen,     show: topics.canView },
+    { name: 'Asistencia',    href: '/attendance', icon: ClipboardList,show: attendance.canView },
+    { name: 'Reportes',      href: '/reports',    icon: BarChart3,    show: reports.canView },
+    { name: 'Sedes',         href: '/campuses',   icon: Building2,    show: campuses.canView },
+    { name: 'Usuarios',      href: '/users',      icon: UserCheck,    show: users.canView },
+    { name: 'Roles',         href: '/roles',      icon: ShieldCheck,  show: roles.canView },
+    { name: 'Configuración', href: '/settings',   icon: Settings,     show: settings.canView },
   ];
 
-  const navigation = allNavItems.filter(item => item.show);
+  const navigation = allNavItems.filter(i => i.show);
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-      {/* Top Navigation */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/80 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <Link to="/dashboard" className="flex items-center gap-3 group">
-              <div className="relative">
-                <div className="absolute inset-0 bg-blue-600 rounded-xl blur-lg opacity-40 group-hover:opacity-60 transition-opacity"></div>
-                <div className="relative w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-lg shadow-blue-500/30 overflow-hidden flex items-center justify-center">
-                  {logoUrl && !logoError ? (
-                    <img
-                      src={logoUrl}
-                      alt="Amor Acción"
-                      className="w-full h-full object-cover"
-                      onError={() => setLogoError(true)}
-                    />
-                  ) : (
-                    <School className="w-6 h-6 text-white" />
-                  )}
-                </div>
-              </div>
-              <div>
-                <h1 className="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                  Amor Acción
-                </h1>
-                <p className="text-xs text-gray-500 font-medium">
-                  Sistema de Asistencia
-                </p>
-              </div>
-            </Link>
-
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-1">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.href;
-                
-                return (
-                  <button
-                    key={item.name}
-                    onClick={() => navigate(item.href)}
-                    className={`
-                      flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200
-                      ${isActive
-                        ? 'bg-blue-50 text-blue-600 shadow-sm'
-                        : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'
-                      }
-                    `}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {item.name}
-                  </button>
-                );
-              })}
-            </nav>
-
-            {/* User & Mobile Menu */}
-            <div className="flex items-center gap-4">
-              {/* User Profile */}
-              <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-gray-200">
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-900">{user?.full_name || user?.email}</p>
-                  <p className="text-xs text-gray-500">{user?.role || 'Administrador'}</p>
-                </div>
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/25">
-                  <UserCircle className="w-6 h-6 text-white" />
-                </div>
-              </div>
-
-              {/* Logout Button */}
-              <button
-                onClick={handleLogout}
-                className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200"
-              >
-                <LogOut className="w-4 h-4" />
-                Salir
-              </button>
-
-              {/* Mobile Menu Button */}
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden p-2 rounded-xl text-gray-600 hover:bg-gray-100 transition"
-              >
-                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
-            </div>
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+      {/* Logo */}
+      <Link to="/dashboard" onClick={() => setSidebarOpen(false)}
+        className="flex items-center gap-3 px-4 py-5 border-b border-gray-100">
+        <div className="relative flex-shrink-0">
+          <div className="absolute inset-0 bg-blue-600 rounded-xl blur-md opacity-40" />
+          <div className="relative w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center overflow-hidden shadow-lg">
+            {logoUrl && !logoError
+              ? <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" onError={() => setLogoError(true)} />
+              : <School className="w-5 h-5 text-white" />}
           </div>
         </div>
+        <div>
+          <p className="text-sm font-bold text-gray-900 leading-tight">Amor Acción</p>
+          <p className="text-xs text-gray-400">Asistencia</p>
+        </div>
+      </Link>
 
-        {/* Mobile Navigation */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 bg-white/95 backdrop-blur-xl">
-            <div className="px-4 py-3 space-y-1">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.href;
-                
-                return (
-                  <button
-                    key={item.name}
-                    onClick={() => {
-                      navigate(item.href);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`
-                      w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
-                      ${isActive
-                        ? 'bg-blue-50 text-blue-600'
-                        : 'text-gray-600 hover:bg-gray-50'
-                      }
-                    `}
-                  >
-                    <Icon className="w-5 h-5" />
-                    {item.name}
-                    {isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
-                  </button>
-                );
-              })}
-              
-              <div className="pt-3 mt-3 border-t border-gray-200">
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition"
-                >
-                  <LogOut className="w-5 h-5" />
-                  Cerrar Sesión
-                </button>
-              </div>
-            </div>
+      {/* Nav items */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+        {navigation.map(item => {
+          const Icon     = item.icon;
+          const isActive = location.pathname === item.href;
+          return (
+            <button key={item.name}
+              onClick={() => { navigate(item.href); setSidebarOpen(false); }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+                isActive
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}>
+              <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+              {item.name}
+              {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600" />}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* User + Logout */}
+      <div className="border-t border-gray-100 p-3 space-y-1">
+        <div className="flex items-center gap-3 px-3 py-2">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <UserCircle className="w-5 h-5 text-white" />
           </div>
-        )}
-      </header>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-gray-900 truncate">{user?.full_name || user?.email}</p>
+            <p className="text-xs text-gray-400 capitalize">{user?.role || '—'}</p>
+          </div>
+        </div>
+        <button onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition">
+          <LogOut className="w-4 h-4" />
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+  );
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
-      </main>
+  return (
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+
+      {/* ── Sidebar desktop ── */}
+      <aside className="hidden md:flex flex-col w-56 flex-shrink-0 bg-white border-r border-gray-100 shadow-sm">
+        <SidebarContent />
+      </aside>
+
+      {/* ── Sidebar mobile overlay ── */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
+          <aside className="relative w-64 bg-white shadow-xl flex flex-col">
+            <button onClick={() => setSidebarOpen(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:bg-gray-100">
+              <X className="w-5 h-5" />
+            </button>
+            <SidebarContent />
+          </aside>
+        </div>
+      )}
+
+      {/* ── Main area ── */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+        {/* Top bar mobile */}
+        <header className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 shadow-sm flex-shrink-0">
+          <button onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-xl text-gray-600 hover:bg-gray-100 transition">
+            <Menu className="w-5 h-5" />
+          </button>
+          <p className="text-sm font-bold text-gray-900">Amor Acción</p>
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+            <UserCircle className="w-5 h-5 text-white" />
+          </div>
+        </header>
+
+        {/* Content */}
+        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
