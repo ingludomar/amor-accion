@@ -3,14 +3,67 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
 import StudentIDCard from '../components/StudentIDCard';
 import {
-  studentAPI, campusAPI, guardianAPI, groupAPI,
+  studentAPI, campusAPI, guardianAPI, groupAPI, gradeAPI,
   Student, Guardian, CreateStudentRequest,
 } from '../lib/supabaseApi';
 import { supabase } from '../lib/supabaseClient';
 import {
   Plus, Search, X, Camera, UserPlus, Phone, MessageCircle,
-  ChevronRight, GraduationCap, Pencil, Trash2, CreditCard, Users,
+  ChevronRight, GraduationCap, Pencil, Trash2, CreditCard, Users, Star,
 } from 'lucide-react';
+
+const SCORE_LABELS: Record<number, { label: string; color: string; bg: string }> = {
+  1: { label: 'Deficiente',  color: 'text-red-700',    bg: 'bg-red-100' },
+  2: { label: 'Regular',     color: 'text-orange-700', bg: 'bg-orange-100' },
+  3: { label: 'Bueno',       color: 'text-yellow-700', bg: 'bg-yellow-100' },
+  4: { label: 'Muy bueno',   color: 'text-blue-700',   bg: 'bg-blue-100' },
+  5: { label: 'Excelente',   color: 'text-green-700',  bg: 'bg-green-100' },
+};
+
+// ─── Componente de calificaciones del estudiante ─────────────────
+function StudentGrades({ studentId }: { studentId: string }) {
+  const { data: grades = [], isLoading } = useQuery({
+    queryKey: ['grades-student', studentId],
+    queryFn: () => gradeAPI.getByStudent(studentId),
+  });
+
+  return (
+    <div className="card p-5">
+      <h4 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
+        <Star className="w-5 h-5 text-amber-400" />
+        Calificaciones
+      </h4>
+      {isLoading ? (
+        <div className="flex justify-center py-4">
+          <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : grades.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-4">Sin calificaciones registradas</p>
+      ) : (
+        <div className="space-y-2">
+          {grades.map((g: any) => {
+            const s = SCORE_LABELS[g.score];
+            return (
+              <div key={g.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
+                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${s.bg} ${s.color}`}>
+                  {g.score}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{g.topic?.title}</p>
+                  <p className="text-xs text-gray-400">{g.topic?.group?.name}</p>
+                  {g.notes && <p className="text-xs text-gray-500 italic">{g.notes}</p>}
+                </div>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${s.bg} ${s.color}`}>
+                  {s.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Utilidades ──────────────────────────────────────────────────
 function calcAge(birthDate?: string): number | null {
@@ -485,6 +538,9 @@ export default function Students() {
               </div>
             )}
           </div>
+
+          {/* Calificaciones */}
+          <StudentGrades studentId={activeStudent.id} />
         </div>
       )}
 

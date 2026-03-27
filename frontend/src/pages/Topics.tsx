@@ -1,8 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
-import { topicAPI, groupAPI, Topic, CreateTopicRequest } from '../lib/supabaseApi';
-import { BookOpen, Plus, Pencil, Trash2, X, Calendar, CheckCircle2, Clock } from 'lucide-react';
+import { topicAPI, groupAPI, gradeAPI, studentAPI, Topic, CreateTopicRequest } from '../lib/supabaseApi';
+import { BookOpen, Plus, Pencil, Trash2, X, Calendar, CheckCircle2, Clock, Star } from 'lucide-react';
+
+const SCORE_LABELS: Record<number, { label: string; color: string; bg: string }> = {
+  1: { label: 'Deficiente',  color: 'text-red-700',    bg: 'bg-red-100' },
+  2: { label: 'Regular',     color: 'text-orange-700', bg: 'bg-orange-100' },
+  3: { label: 'Bueno',       color: 'text-yellow-700', bg: 'bg-yellow-100' },
+  4: { label: 'Muy bueno',   color: 'text-blue-700',   bg: 'bg-blue-100' },
+  5: { label: 'Excelente',   color: 'text-green-700',  bg: 'bg-green-100' },
+};
 
 const STATUS_COLORS = {
   done:    'bg-green-100 text-green-800',
@@ -18,6 +26,10 @@ export default function Topics() {
   const [form, setForm] = useState<Partial<CreateTopicRequest>>({
     title: '', description: '', group_id: '', planned_date: '', actual_date: '',
   });
+
+  // Estado modal calificaciones
+  const [gradingTopic, setGradingTopic] = useState<Topic | null>(null);
+  const [scores, setScores] = useState<Record<string, { score: number; notes: string }>>({});
 
   const { data: topics = [], isLoading } = useQuery({
     queryKey: ['topics', filterGroup, filterDone],
@@ -79,6 +91,58 @@ export default function Topics() {
   const toggleDone = (t: Topic) => {
     updateMutation.mutate({ id: t.id, data: { is_done: !t.is_done } });
   };
+
+  // Estudiantes del grupo del tema seleccionado para calificar
+  const { data: groupStudents = [] } = useQuery({
+    queryKey: ['students-by-group', gradingTopic?.group_id],
+    enabled: !!gradingTopic?.group_id,
+    queryFn: async () => {
+      const { data } = await studentAPI.getAll({ group_id: gradingTopic!.group_id, is_active: true });
+      return data ?? [];
+    },
+  });
+
+  // Calificaciones ya guardadas para el tema seleccionado
+  const { data: existingGrades = [] } = useQuery({
+    queryKey: ['grades-topic', gradingTopic?.id],
+    enabled: !!gradingTopic?.id,
+    queryFn: () => gradeAPI.getByTopic(gradingTopic!.id),
+  });
+
+  // Pre-cargar scores existentes cuando se abra el modal
+  useEffect(() => {
+    if (existingGrades.length > 0) {
+      const map: Record<string, { score: number; notes: string }> = {};
+      existingGrades.forEach((g: any) => { map[g.student_id] = { score: g.score, notes: g.notes || '' }; });
+      setScores(map);
+    }
+  }, [existingGrades]);
+
+  const gradeMutation = useMutation({
+    mutationFn: async () => {
+      const rows = Object.entries(scores)
+        .filter(([, v]) => v.score > 0)
+        .map(([student_id, v]) => ({
+          student_id,
+          topic_id: gradingTopic!.id,
+          score: v.score,
+          notes: v.notes || undefined,
+        }));
+      if (rows.length === 0) return;
+      await gradeAPI.upsertBatch(rows);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['grades-topic'] });
+      queryClient.invalidateQueries({ queryKey: ['grades-student'] });
+      setGradingTopic(null);
+    },
+    onError: (e: any) => alert('Error al guardar: ' + e.message),
+  });
+
+  function openGrading(t: Topic) {
+    setScores({});
+    setGradingTopic(t);
+  }
 
   return (
     <Layout>
@@ -169,6 +233,11 @@ export default function Topics() {
 
                   {/* Acciones */}
                   <div className="flex gap-1">
+                    {t.is_done && (
+                      <button onClick={() => openGrading(t)} className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg" title="Calificar estudiantes">
+                        <Star className="w-4 h-4" />
+                      </button>
+                    )}
                     <button onClick={() => openEdit(t)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
                       <Pencil className="w-4 h-4" />
                     </button>
@@ -185,6 +254,92 @@ export default function Topics() {
           </div>
         )}
       </div>
+
+      {/* Modal Calificaciones */}
+      {gradingTopic && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] flex flex-col">
+            <div className="sticky top-0 bg-white border-b px-5 py-4 flex items-center justify-between flex-shrink-0">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Calificar estudiantes</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{gradingTopic.title}</p>
+              </div>
+              <button onClick={() => setGradingTopic(null)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-5 space-y-4">
+              {groupStudents.length === 0 ? (
+                <p className="text-center text-gray-400 py-8">No hay estudiantes en este grupo</p>
+              ) : (
+                groupStudents.map((s: any) => {
+                  const current = scores[s.id] ?? { score: 0, notes: '' };
+                  return (
+                    <div key={s.id} className="border border-gray-100 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-bold text-blue-600">
+                            {s.full_name.charAt(0)}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{s.full_name}</p>
+                          <p className="text-xs text-gray-400">{s.student_code}</p>
+                        </div>
+                        {current.score > 0 && (
+                          <span className={`ml-auto text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${SCORE_LABELS[current.score].bg} ${SCORE_LABELS[current.score].color}`}>
+                            {SCORE_LABELS[current.score].label}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Selector de nota 1-5 */}
+                      <div className="flex gap-2">
+                        {[1, 2, 3, 4, 5].map(n => (
+                          <button
+                            key={n}
+                            onClick={() => setScores(p => ({ ...p, [s.id]: { ...current, score: n } }))}
+                            className={`flex-1 py-2 rounded-lg text-sm font-bold border-2 transition ${
+                              current.score === n
+                                ? `${SCORE_LABELS[n].bg} ${SCORE_LABELS[n].color} border-current`
+                                : 'border-gray-200 text-gray-400 hover:border-gray-300'
+                            }`}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Nota opcional */}
+                      <input
+                        type="text"
+                        placeholder="Observación (opcional)"
+                        value={current.notes}
+                        onChange={e => setScores(p => ({ ...p, [s.id]: { ...current, notes: e.target.value } }))}
+                        className="input-field text-sm"
+                      />
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="border-t p-4 flex gap-3 flex-shrink-0">
+              <button onClick={() => setGradingTopic(null)} className="btn-secondary flex-1">
+                Cancelar
+              </button>
+              <button
+                onClick={() => gradeMutation.mutate()}
+                disabled={gradeMutation.isPending || Object.values(scores).filter(v => v.score > 0).length === 0}
+                className="btn-primary flex-1"
+              >
+                {gradeMutation.isPending ? 'Guardando…' : 'Guardar calificaciones'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {isModalOpen && (

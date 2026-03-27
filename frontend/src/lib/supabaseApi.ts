@@ -863,6 +863,69 @@ export const reportAPI = {
   },
 };
 
+// ============================================
+// GRADES API
+// ============================================
+
+export interface Grade {
+  id: string;
+  student_id: string;
+  topic_id: string;
+  score: number;
+  notes?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  student?: { id: string; full_name: string; student_code: string };
+  topic?: { id: string; title: string };
+}
+
+export const gradeAPI = {
+  // Obtener todas las calificaciones de un tema (con datos del estudiante)
+  getByTopic: async (topicId: string) => {
+    const { data, error } = await supabase
+      .from('grades')
+      .select('*, student:students(id, full_name, student_code)')
+      .eq('topic_id', topicId);
+    if (error) throw error;
+    return data as Grade[];
+  },
+
+  // Obtener todas las calificaciones de un estudiante (con datos del tema)
+  getByStudent: async (studentId: string) => {
+    const { data, error } = await supabase
+      .from('grades')
+      .select('*, topic:topics(id, title, planned_date, group:groups(name))')
+      .eq('student_id', studentId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data as Grade[];
+  },
+
+  // Insertar o actualizar una calificación (upsert por student_id + topic_id)
+  upsert: async (grade: { student_id: string; topic_id: string; score: number; notes?: string }) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data, error } = await supabase
+      .from('grades')
+      .upsert({ ...grade, created_by: user?.id }, { onConflict: 'student_id,topic_id' })
+      .select();
+    if (error) throw error;
+    return data;
+  },
+
+  // Upsert múltiples calificaciones a la vez
+  upsertBatch: async (grades: { student_id: string; topic_id: string; score: number; notes?: string }[]) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const rows = grades.map(g => ({ ...g, created_by: user?.id }));
+    const { data, error } = await supabase
+      .from('grades')
+      .upsert(rows, { onConflict: 'student_id,topic_id' })
+      .select();
+    if (error) throw error;
+    return data;
+  },
+};
+
 export default {
   campusAPI,
   studentAPI,
@@ -873,5 +936,6 @@ export default {
   reportAPI,
   attendanceAPI,
   userAPI,
+  gradeAPI,
 };
 
