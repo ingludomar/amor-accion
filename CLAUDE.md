@@ -159,21 +159,32 @@ Configurar en Vercel dashboard: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
 
 ## Estado actual de módulos
 
+> Última actualización: 27 Mar 2026 — Ver [TRACKING.md](docs/01-overview/TRACKING.md) para detalle completo.
+
 | Módulo | Estado | Notas |
 |--------|--------|-------|
-| Login | ✅ Completo | |
-| Dashboard | ✅ Completo | |
+| Login | ✅ Completo | Supabase Auth |
+| Dashboard | ✅ Completo | Datos reales: stats, sesiones, ausencias |
 | Sedes (Campuses) | ✅ Completo | Logo, ciudad, activar/desactivar |
-| Usuarios | ✅ Completo | Roles: admin / coordinador / profesor |
+| Usuarios | ✅ Completo | RBAC, username auto-generado |
+| Roles/Permisos | ✅ Completo | Matriz por módulo, editable |
 | Estudiantes | ✅ Completo | Foto, grupo, sede, acudientes, carnet con QR |
 | Acudientes | ✅ Completo | |
-| Grupos | ✅ Completo | Jardín / Infancia / Pre-Juventud, múltiples profesores por grupo |
+| Familias | ✅ Completo | |
+| Grupos | ✅ Completo | Jardín / Infancia / Pre-Juventud |
+| Temas | ✅ Completo | Por grupo, marcar como realizado |
 | Años escolares | ✅ Completo | |
 | Configuración | ✅ Completo | |
-| **Asistencia** | ⚠️ Incompleto | Página existe. Falta: crear sesiones, tomar asistencia por grupo, ver historial |
-| **Reportes** | ❌ Pendiente | No implementado |
+| Asistencia | ✅ Completo | Tomar asistencia + Historial por grupo |
+| **Reportes** | ❌ Pendiente | Ver BACKLOG |
 
 ## Lo que falta por implementar
 
-1. **Asistencia** — la página existe pero está incompleta. Falta: crear/gestionar sesiones de clase, tomar asistencia de la lista de estudiantes de un grupo, ver historial de asistencia.
-2. **Reportes** — ninguno implementado aún. Posibles: asistencia por grupo, por estudiante, por fecha.
+Ver [BACKLOG.md](docs/01-overview/BACKLOG.md) para descripción detallada de cada feature.
+
+1. **Cambio de contraseña** (🔴 Alta) — cada usuario cambia su propia contraseña
+2. **Sistema de calificaciones** (🔴 Alta) — notas por estudiante por tema
+3. **Reportes + exportación PDF** (🟡 Media) — asistencia por grupo/estudiante/fecha
+4. **Escaneo QR en asistencia** (🟡 Media) — usar cámara para marcar presentes
+5. **Alertas de inasistencia** (🟢 Baja) — notificar cuando supera umbral de ausencias
+6. **PWA instalable** (🟢 Baja) — instalar app en celular como nativa

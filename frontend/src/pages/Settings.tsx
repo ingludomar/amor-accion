@@ -2,11 +2,44 @@ import { useState } from 'react';
 import Layout from '../components/Layout';
 import ImageUpload from '../components/ImageUpload';
 import { uploadLogo } from '../lib/storageApi';
-import { Settings as SettingsIcon, Upload, CheckCircle } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
+import { Settings as SettingsIcon, Upload, CheckCircle, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 export default function Settings() {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Cambio de contraseña
+  const [pwForm, setPwForm] = useState({ nueva: '', confirmar: '' });
+  const [showNueva, setShowNueva] = useState(false);
+  const [showConfirmar, setShowConfirmar] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwSuccess, setPwSuccess] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
+
+  async function handleCambiarPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPwError(null);
+    setPwSuccess(false);
+
+    if (pwForm.nueva.length < 8) {
+      return setPwError('La contraseña debe tener mínimo 8 caracteres.');
+    }
+    if (pwForm.nueva !== pwForm.confirmar) {
+      return setPwError('Las contraseñas no coinciden.');
+    }
+
+    setPwLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: pwForm.nueva });
+    setPwLoading(false);
+
+    if (error) {
+      setPwError(error.message || 'Error al cambiar la contraseña.');
+    } else {
+      setPwSuccess(true);
+      setPwForm({ nueva: '', confirmar: '' });
+    }
+  }
 
   const handleLogoUpload = async (file: File) => {
     try {
@@ -114,6 +147,80 @@ export default function Settings() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Cambio de contraseña */}
+        <div className="bg-white rounded-2xl shadow-card border border-gray-100 p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <Lock className="w-6 h-6 text-indigo-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Cambiar contraseña</h2>
+              <p className="text-sm text-gray-500">Actualiza tu contraseña de acceso al sistema</p>
+            </div>
+          </div>
+
+          {pwSuccess && (
+            <div className="mb-5 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <p className="text-green-800 text-sm">Contraseña actualizada exitosamente.</p>
+            </div>
+          )}
+
+          {pwError && (
+            <div className="mb-5 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <p className="text-red-700 text-sm">{pwError}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleCambiarPassword} className="max-w-sm space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nueva contraseña <span className="text-gray-400 font-normal">(mín. 8 caracteres)</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showNueva ? 'text' : 'password'}
+                  className="input-field pr-10"
+                  placeholder="••••••••"
+                  value={pwForm.nueva}
+                  onChange={e => setPwForm(p => ({ ...p, nueva: e.target.value }))}
+                  autoComplete="new-password"
+                />
+                <button type="button" onClick={() => setShowNueva(v => !v)}
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-400">
+                  {showNueva ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Confirmar nueva contraseña
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirmar ? 'text' : 'password'}
+                  className="input-field pr-10"
+                  placeholder="••••••••"
+                  value={pwForm.confirmar}
+                  onChange={e => setPwForm(p => ({ ...p, confirmar: e.target.value }))}
+                  autoComplete="new-password"
+                />
+                <button type="button" onClick={() => setShowConfirmar(v => !v)}
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-400">
+                  {showConfirmar ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" disabled={pwLoading}
+              className="btn-primary w-full">
+              {pwLoading ? 'Actualizando…' : 'Cambiar contraseña'}
+            </button>
+          </form>
         </div>
 
         {/* Storage Info */}

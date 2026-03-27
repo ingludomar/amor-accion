@@ -1,355 +1,114 @@
-# 📊 TRACKING DE PROGRESO - Dashboard Visual
+# TRACKING DE PROGRESO - Amor Acción
 
-> **Dashboard ejecutivo del proyecto. Actualizar al final de cada sesión.**
+> Fuente de verdad del estado actual del proyecto. Actualizar al finalizar cada feature.
+> **Última actualización:** 27 Mar 2026
 
 ---
 
-## 🎯 Resumen Ejecutivo
+## Estado General
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
 ║  AMOR ACCIÓN - SISTEMA DE ASISTENCIA                         ║
-║  Fase Actual: 1 - Configuración Inicial                     ║
-║  Progreso General: 15%                                       ║
-║  Estado: 🟡 En Desarrollo                                    ║
-║  Última actualización: 17 Feb 2026                          ║
+║  Progreso General: 75%                                       ║
+║  Estado: 🟢 En Producción / Desarrollo activo               ║
+║  URL Producción: https://amor-accion.vercel.app              ║
+║  Rama principal: main                                        ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
 ---
 
-## 📈 Progreso por Fase
+## Módulos implementados
 
-### Fase 1: Configuración Inicial 🔧
-```
-[████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 15%
-
-✅ Completado:
-   ├─ Sistema multi-agente documentado
-   ├─ Autenticación con Supabase
-   ├─ Login funcional
-   ├─ Tests de login (6 tests)
-   └─ CI/CD configurado
-
-🔄 En Progreso:
-   ├─ Tests de cobertura (>80%)
-   └─ Estructura profesional
-
-⏳ Pendiente:
-   ├─ Gestión de Sedes
-   ├─ Gestión de Años Escolares
-   └─ Gestión de Estudiantes
-```
-
-### Fase 2: Funcionalidades Básicas 📋
-```
-[░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 0%
-
-⏳ Pendiente:
-   ├─ CRUD Sedes (Campuses)
-   ├─ CRUD Años Escolares
-   ├─ CRUD Estudiantes
-   ├─ CRUD Acudientes
-   └─ Subida de fotos (Storage)
-```
-
-### Fase 3: Personalización 🎨
-```
-[░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 0%
-
-⏳ Pendiente:
-   ├─ Settings page
-   ├─ Logo organización
-   ├─ Diseño responsive
-   └─ Campos configurables
-```
-
-### Fase 4: Sistema de Asistencia ✔️
-```
-[░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 0%
-
-⏳ Pendiente:
-   ├─ Gestión de Grupos
-   ├─ Sesiones de clase
-   ├─ Toma de asistencia
-   ├─ Reportes básicos
-   └─ Exportar datos
-```
-
-### Fase 5: Testing 🧪
-```
-[░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 0%
-
-⏳ Pendiente:
-   ├─ Tests E2E
-   ├─ Testing con usuarios reales
-   ├─ Pruebas de estrés
-   └─ Validación de datos
-```
-
-### Fase 6: Producción 🚀
-```
-[░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 0%
-
-⏳ Pendiente:
-   ├─ Deploy Vercel
-   ├─ Configuración dominio
-   ├─ Backups automáticos
-   └─ Capacitación usuarios
-```
+| Módulo          | Estado        | Notas |
+|-----------------|---------------|-------|
+| Login           | ✅ Completo   | Supabase Auth |
+| Dashboard       | ✅ Completo   | Datos reales: stats, sesiones, ausencias |
+| Sedes           | ✅ Completo   | Logo, ciudad, activar/desactivar |
+| Usuarios        | ✅ Completo   | RBAC, username auto-generado |
+| Roles/Permisos  | ✅ Completo   | Matriz por módulo, editable |
+| Estudiantes     | ✅ Completo   | Foto, grupo, sede, acudientes, carnet QR |
+| Acudientes      | ✅ Completo   | |
+| Familias        | ✅ Completo   | |
+| Grupos          | ✅ Completo   | Jardín / Infancia / Pre-Juventud |
+| Temas           | ✅ Completo   | Por grupo, marcar como realizado |
+| Años escolares  | ✅ Completo   | |
+| Configuración   | ✅ Completo   | |
+| Asistencia      | ✅ Completo   | Tomar asistencia + Historial |
+| **Reportes**    | ❌ Pendiente  | Ver BACKLOG |
 
 ---
 
-## 🎯 Features Activos
+## Features completados (en orden)
 
-### FEATURE-001: Gestión de Sedes 🏫
-
-```
-╔══════════════════════════════════════════╗
-║  Estado: 📋 Listo para desarrollo       ║
-║  Prioridad: 🔥 Alta                      ║
-║  Agente: AGENT-DEVELOPER (en espera)    ║
-╚══════════════════════════════════════════╝
-
-Progreso por Agente:
-┌────────────────────────────────────────┐
-│ Architect:  [██████████] 100% ✅       │
-│ Developer:  [░░░░░░░░░░] 0%   ⏳       │
-│ Tester:     [░░░░░░░░░░] 0%   ⏳       │
-│ Reviewer:   [░░░░░░░░░░] 0%   ⏳       │
-│ Integrator: [░░░░░░░░░░] 0%   ⏳       │
-└────────────────────────────────────────┘
-
-Tareas Pendientes:
-  □ Crear tabla campuses en Supabase
-  □ Implementar API methods
-  □ Crear página Campuses.tsx
-  □ Crear formulario CampusForm.tsx
-  □ Integrar upload de logos
-  □ Tests unitarios
-  □ Tests de integración
-  □ Code review
-  □ Merge y deploy
-```
+| # | Feature | Rama | Fecha |
+|---|---------|------|-------|
+| 1 | RBAC - Roles y permisos | dev-feature-restrict-login | Mar 2026 |
+| 2 | Username auto-generado en usuarios | dev-feature-auto-username | Mar 2026 |
+| 3 | Historial de asistencia + Sidebar nav | dev-feature-historial-asistencia | Mar 2026 |
+| 4 | Dashboard con datos reales | dev-feature-dashboard-real | Mar 2026 |
 
 ---
 
-## 📊 Métricas de Calidad
+## Backlog pendiente
 
-### Testing
-```
-Cobertura General:    [███░░░░░░░] 30% ⚠️
-Meta: 80%
+Ver [BACKLOG.md](./BACKLOG.md) para el detalle completo.
 
-Tests Unitarios:      [████░░░░░░] 40%
-Tests Integración:    [░░░░░░░░░░] 0%
-Tests E2E:            [░░░░░░░░░░] 0%
-
-Archivos testeados:   5
-Archivos sin tests:   15
-Tests pasando:        6/6 ✅
-```
-
-### Código
-```
-TypeScript:           ✅ Estricto
-Linting:              ✅ Sin errores
-Build:                ✅ Exitoso
-Consola:              ⚠️ Warnings menores
-
-Líneas de código:     ~2,500
-Componentes:          8
-Páginas:              7
-Tests:                5 archivos
-```
-
-### Documentación
-```
-Archivos creados:     15+
-Guías:                5
-Features:             1
-Handoffs:             1
-
-Documentación/       [████████░░] 80%
-código:               ✅ Bien documentado
-```
+| # | Feature | Prioridad |
+|---|---------|-----------|
+| 5 | Cambio de contraseña | 🔴 Alta |
+| 6 | Sistema de calificaciones | 🔴 Alta |
+| 7 | Reportes + exportación PDF | 🟡 Media |
+| 8 | Escaneo QR en asistencia | 🟡 Media |
+| 9 | Alertas de inasistencia | 🟢 Baja |
+| 10 | PWA instalable | 🟢 Baja |
 
 ---
 
-## 👥 Estado del Equipo
+## Infraestructura
 
-| Agente | Estado | Asignación | Próxima Tarea |
-|--------|--------|------------|---------------|
-| 🏗️ Architect | ✅ Disponible | Review FEATURE-001 | Aprobar para desarrollo |
-| 💻 Developer | ⏳ En espera | FEATURE-001 | Iniciar implementación |
-| 🧪 Tester | 🔧 Ocupado | Auth tests | Completar cobertura |
-| 🔍 Reviewer | ✅ Disponible | - | Esperando PRs |
-| 🔄 Integrator | ✅ Disponible | - | Esperando aprobaciones |
-
----
-
-## 🐛 Problemas y Bloqueos
-
-### 🔴 Bloqueantes (0)
-Ninguno actualmente
-
-### 🟡 Mayores (2)
-- [ ] Cobertura de tests baja (30% vs 80% meta)
-  - Impacto: Calidad del código
-  - Acción: AGENT-TESTER trabajando en ello
-  
-- [ ] Algunos warnings TypeScript
-  - Impacto: Técnico, no funcional
-  - Acción: Limpiar en próximo refactor
-
-### 🟢 Menores (2)
-- [ ] Warnings en consola de desarrollo
-- [ ] Logo placeholder genérico
+| Componente | Detalle |
+|---|---|
+| Frontend | React 18 + TypeScript + Vite |
+| Base de datos | Supabase (PostgreSQL) |
+| Auth | Supabase Auth (email confirmation desactivado) |
+| Storage | Supabase Storage (logos, fotos) |
+| Deploy | Vercel — auto-deploy en push a `main` |
+| Preview | Vercel genera URL por cada rama `dev-feature-*` |
 
 ---
 
-## 📅 Timeline
+## Usuarios del sistema
 
-```
-Enero 2026    [░░░░░░░░░░░░░░░░░░░░]
-              Setup inicial
+| Email | Rol | Estado |
+|---|---|---|
+| admin@amoraccion.com | admin | ✅ Activo |
+| almicar.pertuz@amoraccion.com | admin | ✅ Activo |
+| lourdes.escalante@amoraccion.com | profesor | ✅ Activo |
+| alberto.gomez@amoraccion.com | profesor | ✅ Activo |
+| julisa.gonzalez@amoraccion.com | profesor | ✅ Activo |
+| mariaines.marulanda@amoraccion.com | profesor | ✅ Activo |
+| iracema.polo@amoraccion.com | profesor | ✅ Activo |
 
-Febrero 2026  [████░░░░░░░░░░░░░░░░] ← ESTAMOS AQUÍ
-              Fase 1 (Configuración)
-              
-Marzo 2026    [░░░░░░░░░░░░░░░░░░░░]
-              Fase 2 (Funcionalidades)
-              
-Abril 2026    [░░░░░░░░░░░░░░░░░░░░]
-              Fase 3-4 (Asistencia)
-              
-Mayo 2026     [░░░░░░░░░░░░░░░░░░░░]
-              Fase 5 (Testing)
-              
-Junio 2026    [░░░░░░░░░░░░░░░░░░░░]
-              Fase 6 (Producción)
-```
+**Contraseña inicial todos:** `Amor2026!`
 
 ---
 
-## ✅ Checklist de Fase Actual
+## Base de datos (tablas activas)
 
-### Fase 1: Configuración Inicial
-
-#### Infraestructura
-- [x] Repositorio configurado
-- [x] CI/CD pipeline
-- [x] Sistema multi-agente
-- [x] Documentación estructurada
-
-#### Autenticación
-- [x] Supabase Auth configurado
-- [x] Login funcional
-- [x] Logout funcional
-- [x] Protected routes
-- [x] Auth store (Zustand)
-
-#### Testing
-- [x] Framework configurado (Vitest)
-- [x] Tests de login creados
-- [ ] Tests de auth store
-- [ ] Tests de ProtectedRoute
-- [ ] Cobertura >80%
-
-#### Base de Datos
-- [ ] Tabla campuses
-- [ ] Tabla school_years
-- [ ] Tabla students
-- [ ] Tabla guardians
-- [ ] Políticas RLS
-
-#### Documentación
-- [x] AGENTS.md
-- [x] WORKFLOW.md
-- [x] CHECKLIST-MIGRACION.md
-- [x] ONBOARDING.md
-- [x] STATUS.md
-- [x] README.md actualizado
-
----
-
-## 🎯 Objetivos de la Semana (17-23 Feb)
-
-```
-Semana del 17 de Febrero:
-
-Lunes 17     [██████████] 100% ✅ Setup multi-agente
-Martes 18    [░░░░░░░░░░] 0%   ⏳ Completar auth tests
-Miércoles 19 [░░░░░░░░░░] 0%   ⏳ Iniciar FEATURE-001
-Jueves 20    [░░░░░░░░░░] 0%   ⏳ CRUD Sedes
-Viernes 21   [░░░░░░░░░░] 0%   ⏳ Tests FEATURE-001
-```
-
-**Meta semanal:** Cobertura >80% + FEATURE-001 50%
-
----
-
-## 🏆 Logros Recientes
-
-### Última Sesión (17 Feb)
-✅ Sistema multi-agente implementado  
-✅ Estructura profesional de documentación  
-✅ CI/CD pipeline configurado  
-✅ Feature-001 especificado  
-✅ Onboarding reducido de 60+ a 10 minutos  
-
-### Impacto
-- 📉 Reducción del 83% en tiempo de onboarding
-- 📈 Estructura escalable para múltiples agentes
-- ✅ Continuidad garantizada entre sesiones
-- 🔄 Workflow definido y automatizado
-
----
-
-## 📈 Tendencias
-
-```
-Velocidad de desarrollo:
-Semana 1-2:  ████░░░░░░ 40%  (Setup)
-Semana 3-4:  ████████░░ 80%  (Desarrollo)
-
-Calidad del código:
-Inicio:      ██░░░░░░░░ 20%
-Actual:      ██████░░░░ 60%
-Meta:        ██████████ 100%
-
-Documentación:
-Inicio:      ███░░░░░░░ 30%
-Actual:      ████████░░ 80%
-Meta:        ██████████ 100%
-```
-
----
-
-## 🎲 Riesgos y Mitigaciones
-
-| Riesgo | Probabilidad | Impacto | Mitigación |
-|--------|-------------|---------|------------|
-| Tests insuficientes | Media | Alto | AGENT-TESTER dedicado |
-| Migración compleja | Baja | Alto | Checklist detallado |
-| Tiempo estimado | Media | Medio | Tracking semanal |
-| Dependencias | Baja | Medio | Documentación clara |
-
----
-
-## 📝 Notas del Dashboard
-
-- **Actualizar este archivo** al final de cada sesión importante
-- **Verificar métricas** de testing semanalmente
-- **Revisar riesgos** al inicio de cada semana
-- **Celebrar logros** con el equipo
-
----
-
-**Dashboard mantenido por:** AGENT-INTEGRATOR  
-**Frecuencia de actualización:** Diaria (en sesiones activas)  
-**Próxima revisión:** 18 Feb 2026
-
----
-
-> 💡 **Nota:** Este dashboard es la fuente de verdad para el estado del proyecto. Mantener actualizado.
+- `profiles` — usuarios del sistema
+- `roles` — roles del sistema
+- `role_permissions` — permisos por rol y módulo
+- `campuses` — sedes
+- `students` — estudiantes
+- `guardians` — acudientes
+- `student_guardians` — relación estudiante-acudiente
+- `families` — grupos familiares
+- `student_families` — relación estudiante-familia
+- `guardian_families` — relación acudiente-familia
+- `groups` — grupos de clases
+- `topics` — temas por grupo
+- `class_sessions` — sesiones de clase
+- `attendance_records` — registros de asistencia
+- `school_years` — años escolares
