@@ -1,7 +1,7 @@
 # TRACKING DE PROGRESO - Amor Acción
 
 > Fuente de verdad del estado actual del proyecto. Actualizar al finalizar cada feature.
-> **Última actualización:** 28 Mar 2026 (Feature 13)
+> **Última actualización:** 28 Mar 2026 (Feature 14)
 
 ---
 
@@ -10,7 +10,7 @@
 ```
 ╔══════════════════════════════════════════════════════════════╗
 ║  AMOR ACCIÓN - SISTEMA DE ASISTENCIA                         ║
-║  Progreso General: 95%                                       ║
+║  Progreso General: 97%                                       ║
 ║  Estado: 🟢 En Producción / Desarrollo activo               ║
 ║  URL Producción: https://amor-accion.vercel.app              ║
 ║  Rama principal: main                                        ║
@@ -54,6 +54,7 @@
 | 7 | Reportes + exportación PDF + sin registro | dev-feature-reportes | Mar 2026 |
 | 11 | Buzón de sugerencias | dev-feature-buzon-sugerencias | Mar 2026 |
 | 13 | Escaneo QR en asistencia | dev-feature-qr-asistencia | Mar 2026 |
+| 14 | Alertas de inasistencia (consecutivas + anual) | dev-feature-alertas | Mar 2026 |
 
 ---
 
@@ -64,7 +65,7 @@ Ver [BACKLOG.md](./BACKLOG.md) para el detalle completo.
 | # | Feature | Prioridad |
 |---|---------|-----------|
 | ~~8~~ | ~~Escaneo QR en asistencia~~ | ✅ Completo |
-| 9 | Alertas de inasistencia | 🟢 Baja |
+| ~~9~~ | ~~Alertas de inasistencia~~ | ✅ Completo |
 | 10 | PWA instalable | 🟢 Baja |
 | 11 | ~~Buzón de sugerencias~~ | ✅ Completo |
 

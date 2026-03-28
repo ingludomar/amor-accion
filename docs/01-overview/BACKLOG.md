@@ -17,7 +17,7 @@
 | 6 | Sistema de calificaciones + escala parametrizable | ✅ Completo | dev-feature-calificaciones | Mar 2026 |
 | 7 | Reportes + exportación PDF + sin registro | ✅ Completo | dev-feature-reportes | Mar 2026 |
 | 8 | Escaneo QR en asistencia | ✅ Completo | dev-feature-qr-asistencia | Mar 2026 |
-| 9 | Alertas de inasistencia | 🟢 Pendiente | dev-feature-alertas | — |
+| 9 | Alertas de inasistencia (consecutivas + anual) | ✅ Completo | dev-feature-alertas | Mar 2026 |
 | 10 | PWA instalable | 🟢 Pendiente | dev-feature-pwa | — |
 | 11 | Buzón de sugerencias | ✅ Completo | dev-feature-buzon-sugerencias | Mar 2026 |
 
