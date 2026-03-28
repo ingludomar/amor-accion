@@ -1,7 +1,7 @@
 # BACKLOG - Amor Acción
 
 > Registro completo de todos los features del proyecto. Ver [TRACKING.md](./TRACKING.md) para el estado general.
-> **Última actualización:** 27 Mar 2026
+> **Última actualización:** 28 Mar 2026
 
 ---
 
@@ -16,7 +16,7 @@
 | 5 | Cambio de contraseña | ✅ Completo | dev-feature-cambio-password | Mar 2026 |
 | 6 | Sistema de calificaciones + escala parametrizable | ✅ Completo | dev-feature-calificaciones | Mar 2026 |
 | 7 | Reportes + exportación PDF + sin registro | ✅ Completo | dev-feature-reportes | Mar 2026 |
-| 8 | Escaneo QR en asistencia | 🟡 Pendiente | dev-feature-qr-asistencia | — |
+| 8 | Escaneo QR en asistencia | ✅ Completo | dev-feature-qr-asistencia | Mar 2026 |
 | 9 | Alertas de inasistencia | 🟢 Pendiente | dev-feature-alertas | — |
 | 10 | PWA instalable | 🟢 Pendiente | dev-feature-pwa | — |
 | 11 | Buzón de sugerencias | ✅ Completo | dev-feature-buzon-sugerencias | Mar 2026 |
