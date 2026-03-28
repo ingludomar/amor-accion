@@ -3,10 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabaseClient';
+import { appSettingsAPI, absenceAPI } from '../lib/supabaseApi';
 import {
   Building2, Users, ClipboardCheck, TrendingUp,
   Calendar, AlertTriangle, ChevronRight, CheckCircle2,
-  XCircle, Clock,
+  XCircle, Clock, Bell,
 } from 'lucide-react';
 
 // ── helpers ──────────────────────────────────────────────────────
@@ -80,28 +81,20 @@ export default function Dashboard() {
     },
   });
 
-  // Top 5 estudiantes con más ausencias este mes
-  const { data: topAbsent = [] } = useQuery({
-    queryKey: ['dash-absent'],
+  // Umbral de inasistencia
+  const { data: threshold = 3 } = useQuery({
+    queryKey: ['app-settings', 'absence_threshold'],
     queryFn: async () => {
-      const { data: sessions } = await supabase
-        .from('class_sessions').select('id').gte('session_date', monthStart);
-      if (!sessions?.length) return [];
-      const ids = sessions.map(s => s.id);
-      const { data: records } = await supabase
-        .from('attendance_records')
-        .select('student_id, student:students(full_name, student_code)')
-        .in('session_id', ids)
-        .eq('status', 'ausente');
-      if (!records?.length) return [];
-      // agrupar por estudiante
-      const map: Record<string, { name: string; code: string; count: number }> = {};
-      records.forEach((r: any) => {
-        if (!map[r.student_id]) map[r.student_id] = { name: r.student?.full_name, code: r.student?.student_code, count: 0 };
-        map[r.student_id].count++;
-      });
-      return Object.values(map).sort((a, b) => b.count - a.count).slice(0, 5);
+      const val = await appSettingsAPI.get('absence_threshold');
+      return val ? parseInt(val) : 3;
     },
+  });
+
+  // Estudiantes en riesgo (ausencias consecutivas >= umbral)
+  const { data: atRiskStudents = [] } = useQuery({
+    queryKey: ['dash-at-risk', threshold],
+    queryFn: () => absenceAPI.getAtRisk(threshold),
+    enabled: threshold > 0,
   });
 
   const stats = [
@@ -189,31 +182,43 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Top ausentes */}
+          {/* Estudiantes en riesgo */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-900">Más ausencias este mes</h2>
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
+              <div className="flex items-center gap-2">
+                <h2 className="font-semibold text-gray-900">Estudiantes en riesgo</h2>
+                {atRiskStudents.length > 0 && (
+                  <span className="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full animate-pulse">
+                    <Bell className="w-3 h-3" /> {atRiskStudents.length}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs text-gray-400">Umbral: {threshold} consecutivas</span>
             </div>
-            {topAbsent.length === 0 ? (
+            {atRiskStudents.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-gray-200" />
-                <p className="text-sm">Sin ausencias registradas</p>
+                <p className="text-sm">Ningún estudiante en riesgo</p>
               </div>
             ) : (
               <div className="space-y-2">
-                {topAbsent.map((s, i) => (
-                  <div key={s.code} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                      i === 0 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'
-                    }`}>{i + 1}</span>
+                {atRiskStudents.map((s) => (
+                  <div key={s.code} className="flex items-center gap-3 py-2 bg-red-50/50 -mx-2 px-2 rounded-lg border-b border-gray-50 last:border-0">
+                    <span className="w-6 h-6 rounded-full flex items-center justify-center bg-red-100 text-red-600 flex-shrink-0">
+                      <Bell className="w-3 h-3" />
+                    </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-800 truncate">{s.name}</p>
-                      <p className="text-xs text-gray-400">{s.code}</p>
+                      <p className="text-xs text-gray-400">{s.group} · {s.code}</p>
                     </div>
-                    <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full flex-shrink-0">
-                      {s.count} ausencias
-                    </span>
+                    <div className="text-right flex-shrink-0">
+                      <span className="text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full block">
+                        {s.consecutive} seguidas
+                      </span>
+                      <span className="text-xs text-gray-400 mt-0.5 block">
+                        {s.yearTotal} en el año
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>

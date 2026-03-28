@@ -3,15 +3,65 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
 import StudentIDCard from '../components/StudentIDCard';
 import {
-  studentAPI, campusAPI, guardianAPI, groupAPI, gradeAPI,
+  studentAPI, campusAPI, guardianAPI, groupAPI, gradeAPI, appSettingsAPI, absenceAPI,
   Student, Guardian, CreateStudentRequest,
 } from '../lib/supabaseApi';
 import { useGradeScale } from '../hooks/useGradeScale';
 import { supabase } from '../lib/supabaseClient';
 import {
   Plus, Search, X, Camera, UserPlus, Phone, MessageCircle,
-  ChevronRight, GraduationCap, Pencil, Trash2, CreditCard, Users, Star,
+  ChevronRight, GraduationCap, Pencil, Trash2, CreditCard, Users, Star, Bell, AlertTriangle,
 } from 'lucide-react';
+
+// ─── Alerta de inasistencia ──────────────────────────────────────
+function AbsenceAlert({ studentId, groupId }: { studentId: string; groupId?: string }) {
+  const { data: threshold = 3 } = useQuery({
+    queryKey: ['app-settings', 'absence_threshold'],
+    queryFn: async () => {
+      const val = await appSettingsAPI.get('absence_threshold');
+      return val ? parseInt(val) : 3;
+    },
+  });
+
+  const { data: analysis } = useQuery({
+    queryKey: ['student-absence-analysis', studentId],
+    queryFn: () => absenceAPI.analyze(studentId, groupId!),
+    enabled: !!groupId,
+  });
+
+  if (!analysis) return null;
+
+  const isAtRisk = analysis.consecutive >= threshold;
+  const isCritical = analysis.consecutive >= 4;
+
+  return (
+    <div className="mt-2 space-y-1.5">
+      {/* Alerta de consecutivas */}
+      {isAtRisk && (
+        <div className={`flex items-center gap-2 border rounded-xl px-3 py-2 ${
+          isCritical ? 'bg-red-100 border-red-300' : 'bg-red-50 border-red-200'
+        }`}>
+          <Bell className={`w-4 h-4 flex-shrink-0 ${isCritical ? 'text-red-600 animate-pulse' : 'text-red-500'}`} />
+          <p className="text-xs text-red-700">
+            <span className="font-bold">{analysis.consecutive} ausencias seguidas</span>
+            {isCritical && <span className="text-red-600 font-bold"> — En riesgo de perder cupo</span>}
+          </p>
+        </div>
+      )}
+
+      {/* Resumen anual siempre visible si tiene ausencias */}
+      {analysis.yearTotal > 0 && (
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+          <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+          <p className="text-xs text-amber-700">
+            <span className="font-bold">{analysis.yearTotal}</span> ausencias de{' '}
+            <span className="font-bold">{analysis.yearSessions}</span> sesiones en {new Date().getFullYear()}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Componente de calificaciones del estudiante ─────────────────
 function StudentGrades({ studentId }: { studentId: string }) {
@@ -403,6 +453,7 @@ export default function Students() {
                     {activeStudent.group.name}
                   </span>
                 )}
+                <AbsenceAlert studentId={activeStudent.id} groupId={activeStudent.group_id} />
               </div>
             </div>
 

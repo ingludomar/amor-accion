@@ -996,6 +996,176 @@ export const suggestionAPI = {
   },
 };
 
+// ============================================
+// ABSENCE ANALYSIS API
+// ============================================
+
+export interface AbsenceAnalysis {
+  consecutive: number;     // ausencias consecutivas actuales (desde la última sesión hacia atrás)
+  yearTotal: number;       // total ausencias en el año
+  yearSessions: number;    // total sesiones en el año donde participó el grupo del estudiante
+}
+
+export const absenceAPI = {
+  /**
+   * Analiza las ausencias de un estudiante:
+   * - Cuenta ausencias consecutivas recientes (desde la última sesión hacia atrás)
+   * - Cuenta total de ausencias en el año
+   */
+  analyze: async (studentId: string, groupId: string): Promise<AbsenceAnalysis> => {
+    const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
+
+    // Obtener todas las sesiones del grupo en el año, ordenadas por fecha desc
+    const { data: sessions } = await supabase
+      .from('class_sessions')
+      .select('id, session_date')
+      .eq('group_id', groupId)
+      .gte('session_date', yearStart)
+      .order('session_date', { ascending: false });
+
+    if (!sessions?.length) return { consecutive: 0, yearTotal: 0, yearSessions: 0 };
+
+    const sessionIds = sessions.map(s => s.id);
+
+    // Obtener todos los registros de asistencia de este estudiante en esas sesiones
+    const { data: records } = await supabase
+      .from('attendance_records')
+      .select('session_id, status')
+      .eq('student_id', studentId)
+      .in('session_id', sessionIds);
+
+    const recordMap: Record<string, string> = {};
+    (records ?? []).forEach((r: any) => { recordMap[r.session_id] = r.status; });
+
+    // Contar consecutivas desde la sesión más reciente hacia atrás
+    let consecutive = 0;
+    for (const session of sessions) {
+      const status = recordMap[session.id];
+      if (status === 'ausente' || !status) {
+        // ausente o sin registro = cuenta como ausencia
+        consecutive++;
+      } else {
+        break; // presente o excusado rompe la racha
+      }
+    }
+
+    // Contar total de ausencias en el año
+    let yearTotal = 0;
+    for (const session of sessions) {
+      const status = recordMap[session.id];
+      if (status === 'ausente') yearTotal++;
+    }
+
+    return { consecutive, yearTotal, yearSessions: sessions.length };
+  },
+
+  /**
+   * Obtiene estudiantes en riesgo (con N+ ausencias consecutivas)
+   * para mostrar en el dashboard
+   */
+  getAtRisk: async (threshold: number): Promise<{ student_id: string; name: string; code: string; group: string; consecutive: number; yearTotal: number }[]> => {
+    // Obtener todos los estudiantes activos con su grupo
+    const { data: students } = await supabase
+      .from('students')
+      .select('id, full_name, student_code, group_id, group:groups(name)')
+      .eq('is_active', true);
+
+    if (!students?.length) return [];
+
+    const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
+
+    // Obtener todas las sesiones del año
+    const { data: sessions } = await supabase
+      .from('class_sessions')
+      .select('id, session_date, group_id')
+      .gte('session_date', yearStart)
+      .order('session_date', { ascending: false });
+
+    if (!sessions?.length) return [];
+
+    // Obtener todos los registros de asistencia del año
+    const sessionIds = sessions.map(s => s.id);
+    const { data: records } = await supabase
+      .from('attendance_records')
+      .select('session_id, student_id, status')
+      .in('session_id', sessionIds);
+
+    // Indexar registros por student_id + session_id
+    const recordMap: Record<string, string> = {};
+    (records ?? []).forEach((r: any) => {
+      recordMap[`${r.student_id}_${r.session_id}`] = r.status;
+    });
+
+    // Agrupar sesiones por grupo
+    const sessionsByGroup: Record<string, typeof sessions> = {};
+    sessions.forEach(s => {
+      if (!sessionsByGroup[s.group_id]) sessionsByGroup[s.group_id] = [];
+      sessionsByGroup[s.group_id].push(s);
+    });
+
+    const results: { student_id: string; name: string; code: string; group: string; consecutive: number; yearTotal: number }[] = [];
+
+    for (const student of students as any[]) {
+      if (!student.group_id) continue;
+      const groupSessions = sessionsByGroup[student.group_id];
+      if (!groupSessions?.length) continue;
+
+      let consecutive = 0;
+      let yearTotal = 0;
+
+      for (const session of groupSessions) {
+        const status = recordMap[`${student.id}_${session.id}`];
+        if (status === 'ausente') yearTotal++;
+      }
+
+      for (const session of groupSessions) {
+        const status = recordMap[`${student.id}_${session.id}`];
+        if (status === 'ausente' || !status) {
+          consecutive++;
+        } else {
+          break;
+        }
+      }
+
+      if (consecutive >= threshold) {
+        results.push({
+          student_id: student.id,
+          name: student.full_name,
+          code: student.student_code,
+          group: student.group?.name ?? '',
+          consecutive,
+          yearTotal,
+        });
+      }
+    }
+
+    return results.sort((a, b) => b.consecutive - a.consecutive);
+  },
+};
+
+// ============================================
+// APP SETTINGS API
+// ============================================
+
+export const appSettingsAPI = {
+  get: async (key: string): Promise<string | null> => {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', key)
+      .maybeSingle();
+    if (error) throw error;
+    return data?.value ?? null;
+  },
+
+  set: async (key: string, value: string): Promise<void> => {
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    if (error) throw error;
+  },
+};
+
 export default {
   campusAPI,
   studentAPI,
@@ -1009,5 +1179,6 @@ export default {
   gradeAPI,
   gradeScaleAPI,
   suggestionAPI,
+  appSettingsAPI,
 };
 

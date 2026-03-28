@@ -3,12 +3,96 @@ import Layout from '../components/Layout';
 import ImageUpload from '../components/ImageUpload';
 import { uploadLogo } from '../lib/storageApi';
 import { supabase } from '../lib/supabaseClient';
-import { gradeScaleAPI } from '../lib/supabaseApi';
+import { gradeScaleAPI, appSettingsAPI } from '../lib/supabaseApi';
 import { useGradeScale, COLOR_CLASSES } from '../hooks/useGradeScale';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Settings as SettingsIcon, Upload, CheckCircle, Lock, Eye, EyeOff, AlertCircle, Star } from 'lucide-react';
+import { Settings as SettingsIcon, Upload, CheckCircle, Lock, Eye, EyeOff, AlertCircle, Star, Bell } from 'lucide-react';
 
 const COLORS = ['red', 'orange', 'yellow', 'blue', 'green', 'purple', 'gray'];
+
+function AbsenceThresholdSection() {
+  const queryClient = useQueryClient();
+  const { data: threshold } = useQuery({
+    queryKey: ['app-settings', 'absence_threshold'],
+    queryFn: () => appSettingsAPI.get('absence_threshold'),
+  });
+  const [value, setValue] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const current = threshold ?? '3';
+
+  async function handleSave() {
+    const num = parseInt(value || current);
+    if (isNaN(num) || num < 1 || num > 20) return;
+    setSaving(true);
+    setSuccess(false);
+    try {
+      await appSettingsAPI.set('absence_threshold', String(num));
+      queryClient.invalidateQueries({ queryKey: ['app-settings', 'absence_threshold'] });
+      setValue('');
+      setSuccess(true);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-card border border-gray-100 p-8">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 bg-red-100 rounded-lg">
+          <Bell className="w-6 h-6 text-red-600" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Alertas de inasistencia</h2>
+          <p className="text-sm text-gray-500">
+            Configura el umbral de ausencias mensuales para activar alertas
+          </p>
+        </div>
+      </div>
+
+      {success && (
+        <div className="mb-5 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
+          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+          <p className="text-green-800 text-sm">Umbral actualizado exitosamente.</p>
+        </div>
+      )}
+
+      <div className="max-w-sm space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Ausencias consecutivas antes de alerta
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min={1}
+              max={20}
+              className="input-field w-24 text-center text-lg font-bold"
+              placeholder={current}
+              value={value}
+              onChange={e => { setValue(e.target.value); setSuccess(false); }}
+            />
+            <span className="text-sm text-gray-500">
+              Actual: <span className="font-bold text-red-600">{current}</span> consecutivas
+            </span>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">
+            Los estudiantes que acumulen este número de ausencias seguidas aparecerán como
+            "en riesgo" en el Dashboard y en su ficha. Recuerda que tras 4 ausencias
+            consecutivas el estudiante pierde su cupo.
+          </p>
+        </div>
+
+        {value && value !== current && (
+          <button onClick={handleSave} disabled={saving} className="btn-primary">
+            {saving ? 'Guardando…' : 'Guardar umbral'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function Settings() {
   const queryClient = useQueryClient();
@@ -335,6 +419,9 @@ export default function Settings() {
             </button>
           )}
         </div>
+
+        {/* Umbral de inasistencia */}
+        <AbsenceThresholdSection />
 
         {/* Storage Info */}
         <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-6 border border-indigo-100">
