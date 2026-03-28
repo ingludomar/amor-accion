@@ -49,7 +49,19 @@ docs/
 ### 03-features/ - Features
 | Feature | Estado | Documento |
 |---------|--------|-----------|
-| Gestión de Sedes | 📋 Listo | [FEATURE-001](./03-features/FEATURE-001-gestion-sedes.md) |
+| 001 — Gestión de Sedes | ✅ Completo | [FEATURE-001](./03-features/FEATURE-001-gestion-sedes.md) |
+| 004 — Gestión de Familias y Acudientes | ✅ Completo | [FEATURE-004](./03-features/FEATURE-004-gestion-familias.md) |
+| 005 — RBAC: Roles y Permisos | ✅ Completo | [FEATURE-005](./03-features/FEATURE-005-rbac-roles-permisos.md) |
+| 006 — Username Auto-generado | ✅ Completo | [FEATURE-006](./03-features/FEATURE-006-username-auto.md) |
+| 007 — Historial de Asistencia | ✅ Completo | [FEATURE-007](./03-features/FEATURE-007-historial-asistencia.md) |
+| 008 — Dashboard con Datos Reales | ✅ Completo | [FEATURE-008](./03-features/FEATURE-008-dashboard-real.md) |
+| 009 — Cambio de Contraseña | ✅ Completo | [FEATURE-009](./03-features/FEATURE-009-cambio-password.md) |
+| 010 — Sistema de Calificaciones | ✅ Completo | [FEATURE-010](./03-features/FEATURE-010-calificaciones.md) |
+| 011 — Reportes + Exportación PDF | ✅ Completo | [FEATURE-011](./03-features/FEATURE-011-reportes-pdf.md) |
+| 012 — Buzón de Sugerencias | ✅ Completo | [FEATURE-012](./03-features/FEATURE-012-buzon-sugerencias.md) |
+| 013 — Escaneo QR en Asistencia | 🟡 Pendiente | [FEATURE-013](./03-features/FEATURE-013-escaneo-qr.md) |
+| 014 — Alertas de Inasistencia | 🟢 Pendiente | [FEATURE-014](./03-features/FEATURE-014-alertas-inasistencia.md) |
+| 015 — PWA Instalable | 🟢 Pendiente | [FEATURE-015](./03-features/FEATURE-015-pwa.md) |
 
 ### 04-guides/ - Guías
 *(Vacío - por crear según necesidad)*

@@ -1,7 +1,25 @@
 # BACKLOG - Amor Acción
 
-> Features pendientes de implementar. Ver [TRACKING.md](./TRACKING.md) para el estado general.
+> Registro completo de todos los features del proyecto. Ver [TRACKING.md](./TRACKING.md) para el estado general.
 > **Última actualización:** 27 Mar 2026
+
+---
+
+## Resumen de features
+
+| # | Feature | Estado | Rama | Fecha |
+|---|---------|--------|------|-------|
+| 1 | RBAC — Roles y permisos por módulo | ✅ Completo | dev-feature-restrict-login | Mar 2026 |
+| 2 | Username auto-generado en usuarios | ✅ Completo | dev-feature-auto-username | Mar 2026 |
+| 3 | Historial de asistencia + navegación sidebar | ✅ Completo | dev-feature-historial-asistencia | Mar 2026 |
+| 4 | Dashboard con datos reales | ✅ Completo | dev-feature-dashboard-real | Mar 2026 |
+| 5 | Cambio de contraseña | ✅ Completo | dev-feature-cambio-password | Mar 2026 |
+| 6 | Sistema de calificaciones + escala parametrizable | ✅ Completo | dev-feature-calificaciones | Mar 2026 |
+| 7 | Reportes + exportación PDF + sin registro | ✅ Completo | dev-feature-reportes | Mar 2026 |
+| 8 | Escaneo QR en asistencia | 🟡 Pendiente | dev-feature-qr-asistencia | — |
+| 9 | Alertas de inasistencia | 🟢 Pendiente | dev-feature-alertas | — |
+| 10 | PWA instalable | 🟢 Pendiente | dev-feature-pwa | — |
+| 11 | Buzón de sugerencias | ✅ Completo | dev-feature-buzon-sugerencias | Mar 2026 |
 
 ---
 
@@ -31,74 +49,145 @@ git branch -d dev-feature-nombre
 git push origin --delete dev-feature-nombre
 ```
 
-**Regla:** Cada feature termina con un commit. Nunca push directo a `main`.
+**Regla:** Cada feature termina con un commit de docs. Nunca push directo a `main`.
 
 ---
 
-## Feature 5 — Cambio de contraseña
+## Feature 1 — RBAC: Roles y permisos por módulo ✅
+
+**Prioridad:** 🔴 Alta
+**Rama:** `dev-feature-restrict-login`
+
+### Descripción
+Sistema de control de acceso basado en roles. Cada rol tiene permisos configurables (ver, crear, editar, eliminar) por módulo.
+
+### Alcance
+- Tabla `role_permissions`: rol + módulo + can_view/can_create/can_edit/can_delete
+- Hook `usePermission(module)` → devuelve `{ canView, canCreate, canEdit, canDelete }`
+- Página `/roles` (solo admin): matriz visual editable de permisos
+- Sidebar filtra items según permisos del usuario
+- Solo `admin@amoraccion.com` puede acceder inicialmente
+- Rutas protegidas con `<ProtectedRoute module="...">` en App.tsx
+
+---
+
+## Feature 2 — Username auto-generado ✅
+
+**Prioridad:** 🟡 Media
+**Rama:** `dev-feature-auto-username`
+
+### Descripción
+Al crear un usuario, el sistema genera automáticamente un username a partir del nombre y apellido.
+
+### Alcance
+- Formato: `nombre.apellido` (minúsculas, sin tildes)
+- Si ya existe, agrega sufijo numérico: `nombre.apellido2`
+- Se muestra en la ficha del usuario
+- No editable por el usuario (solo admin puede modificar)
+
+---
+
+## Feature 3 — Historial de asistencia + navegación sidebar ✅
+
+**Prioridad:** 🔴 Alta
+**Rama:** `dev-feature-historial-asistencia`
+
+### Descripción
+Vista de historial de sesiones pasadas con sus registros de asistencia, accesible desde la página de Asistencia.
+
+### Alcance
+- Tabs en `/attendance`: "Tomar asistencia" | "Historial"
+- Historial: lista de sesiones pasadas filtrable por grupo y fecha
+- Al abrir una sesión: ver lista completa con estado de cada estudiante
+- Sidebar con todos los módulos navegables
+
+---
+
+## Feature 4 — Dashboard con datos reales ✅
+
+**Prioridad:** 🔴 Alta
+**Rama:** `dev-feature-dashboard-real`
+
+### Descripción
+Dashboard principal con estadísticas reales del sistema, no datos de muestra.
+
+### Alcance
+- Tarjetas: total estudiantes activos, sesiones del mes, % asistencia promedio
+- Gráfico de tendencia de asistencia (últimas semanas)
+- Top 5 estudiantes con más ausencias
+- Sesiones recientes
+- Datos en tiempo real desde Supabase
+
+---
+
+## Feature 5 — Cambio de contraseña ✅
 
 **Prioridad:** 🔴 Alta
 **Rama:** `dev-feature-cambio-password`
 
 ### Descripción
-Permitir que cada usuario cambie su propia contraseña desde la app, sin depender del admin.
+Cada usuario puede cambiar su propia contraseña desde la app, sin depender del admin.
 
 ### Alcance
-- Botón o sección en perfil/configuración del usuario
-- Formulario: contraseña actual + nueva contraseña + confirmar
-- Validar que nueva contraseña tenga mínimo 8 caracteres
-- Usar `supabase.auth.updateUser({ password: nuevaPassword })`
-- Mostrar éxito o error con feedback visual
+- Sección en `/settings`
+- Campos: nueva contraseña + confirmar contraseña
+- Mínimo 8 caracteres
+- Usa `supabase.auth.updateUser({ password })`
+- Feedback visual de éxito o error
 
 ### No incluye
-- Reset por email (Supabase ya lo maneja)
+- Reset por email (Supabase ya lo maneja en login)
 - Admin cambiando contraseña de otro usuario
 
 ---
 
-## Feature 6 — Sistema de calificaciones
+## Feature 6 — Sistema de calificaciones ✅
 
 **Prioridad:** 🔴 Alta
 **Rama:** `dev-feature-calificaciones`
 
 ### Descripción
-Registrar una nota o calificación por estudiante por tema dado en clase.
+Registrar una calificación por estudiante por tema. La escala es parametrizable desde Configuración.
 
 ### Alcance
-- Nueva tabla `grades`: `id`, `student_id`, `topic_id`, `session_id`, `score`, `notes`, `created_by`
-- Vista en página de temas: al marcar tema como realizado, opción de ingresar notas
-- Vista en ficha del estudiante: historial de calificaciones
-- Escala: numérica 1–5 o conceptual (Excelente / Bueno / Regular / Deficiente) — a definir
-- Migración SQL nueva
+- Tabla `grades`: `student_id`, `topic_id`, `score (1-5)`, `notes`, `UNIQUE(student_id, topic_id)`
+- Tabla `grade_scale`: score → label + color (configurable)
+- Botón ⭐ en temas marcados como realizados → modal de calificación grupal
+- Ficha del estudiante: sección "Calificaciones" con historial por tema
+- Página Configuración: editor de escala (etiqueta + color por cada puntaje 1-5)
+- Hook `useGradeScale()` compartido entre Topics, Students y Settings
 
-### No incluye (por ahora)
-- Exportar calificaciones
-- Promedios automáticos
+### Escala por defecto
+| Puntaje | Etiqueta | Color |
+|---------|----------|-------|
+| 1 | Deficiente | Rojo |
+| 2 | Regular | Naranja |
+| 3 | Bueno | Amarillo |
+| 4 | Muy bueno | Azul |
+| 5 | Excelente | Verde |
 
 ---
 
-## Feature 7 — Reportes + exportación PDF
+## Feature 7 — Reportes + exportación PDF ✅
 
 **Prioridad:** 🟡 Media
 **Rama:** `dev-feature-reportes`
 
 ### Descripción
-Página `/reports` con reportes de asistencia y exportación.
+Página `/reports` con reportes de asistencia y exportación a PDF.
 
 ### Alcance
-- Reporte de asistencia por grupo (% presencia por fecha)
-- Reporte de asistencia por estudiante (historial completo)
-- Filtros: rango de fechas, sede, grupo
-- Exportar a PDF (usar `jspdf` + `jspdf-autotable`)
-- Posible exportar a Excel (`xlsx`)
-
-### Notas
-- La página `/reports` ya existe en el sidebar pero sin contenido
-- El módulo ya tiene permisos configurados en `role_permissions`
+- Reporte general: todas las sesiones con % por grupo
+- Reporte por grupo: detalle de cada sesión + estudiantes sin registro
+- Reporte por estudiante: historial completo de asistencias
+- Filtros: rango de fechas, grupo, estudiante
+- Exportar a PDF con `jspdf` + `jspdf-autotable`
+- Columna "Sin registro" (SR) para estudiantes no registrados en sesión
+- Nota al pie en reporte de estudiante sobre sesiones sin registro
 
 ---
 
-## Feature 8 — Escaneo QR en asistencia
+## Feature 8 — Escaneo QR en asistencia 🟡 Pendiente
 
 **Prioridad:** 🟡 Media
 **Rama:** `dev-feature-qr-asistencia`
@@ -110,7 +199,7 @@ Tomar asistencia escaneando el carnet QR del estudiante con la cámara del celul
 - Botón "Escanear QR" en la vista de tomar asistencia
 - Abrir cámara del dispositivo (usar `html5-qrcode` o similar)
 - Decodificar QR → `student_code` → buscar estudiante → marcar presente
-- Feedback visual: nombre del estudiante escaneado + estado
+- Feedback visual: nombre del estudiante + confirmación
 - Funcionar en móvil (principal) y desktop con cámara
 
 ### Notas
@@ -119,38 +208,38 @@ Tomar asistencia escaneando el carnet QR del estudiante con la cámara del celul
 
 ---
 
-## Feature 9 — Alertas de inasistencia
+## Feature 9 — Alertas de inasistencia 🟢 Pendiente
 
 **Prioridad:** 🟢 Baja
 **Rama:** `dev-feature-alertas`
 
 ### Descripción
-Notificar cuando un estudiante supera un umbral de ausencias en el mes.
+Notificar visualmente cuando un estudiante supera un umbral de ausencias en el mes.
 
 ### Alcance
-- Configurar umbral (ej: 3 ausencias en el mes)
-- Badge o alerta visual en dashboard y ficha del estudiante
-- Posiblemente: enviar WhatsApp/email al acudiente (futuro)
+- Configurar umbral desde `/settings` (ej: 3 ausencias en el mes)
+- Badge de alerta en dashboard y ficha del estudiante
+- El dashboard ya muestra el top 5 de ausencias — esto es una capa activa encima
 
-### Notas
-- El dashboard ya muestra el top 5 de más ausencias — esto sería una capa de alerta activa
+### No incluye (por ahora)
+- Notificaciones por WhatsApp/email al acudiente
 
 ---
 
-## Feature 10 — PWA instalable
+## Feature 10 — PWA instalable 🟢 Pendiente
 
 **Prioridad:** 🟢 Baja
 **Rama:** `dev-feature-pwa`
 
 ### Descripción
-Convertir la app en una Progressive Web App para que pueda instalarse como app nativa en celulares.
+Convertir la app en una Progressive Web App para instalarse como app nativa en celulares.
 
 ### Alcance
 - Configurar `vite-plugin-pwa`
-- Manifest: nombre, icono, colores
-- Service worker: cache básico para uso offline (dashboard, listados)
-- Botón "Instalar app" en pantalla de inicio o settings
-- Íconos en tamaños requeridos (192x192, 512x512)
+- Manifest: nombre, íconos, colores de Amor Acción
+- Service worker: cache básico para uso offline
+- Botón "Instalar app" en Settings o en pantalla de inicio
+- Íconos en tamaños 192x192 y 512x512
 
 ### Notas
 - Vercel soporta PWA sin configuración adicional
@@ -158,27 +247,26 @@ Convertir la app en una Progressive Web App para que pueda instalarse como app n
 
 ---
 
-## Feature 11 — Buzón de sugerencias
+## Feature 11 — Buzón de sugerencias ✅
 
 **Prioridad:** 🟡 Media
 **Rama:** `dev-feature-buzon-sugerencias`
 
 ### Descripción
-Canal interno para que cualquier usuario envíe ideas, reportes de error o comentarios sobre la app. El admin las gestiona desde una página dedicada.
+Canal interno para que cualquier usuario envíe ideas, errores o comentarios sobre la app. El admin las gestiona desde una página dedicada.
 
 ### Categorías
 - **Nueva función** — ideas de cosas que quisieran tener
 - **Mejora** — algo que ya existe pero podría funcionar mejor
 - **Error** — algo que no funciona como debería
-- **Comentario general** — cualquier otra observación
+- **Comentario** — cualquier otra observación
 
 ### Alcance
-- Tabla `suggestions` en Supabase: categoría, mensaje, estado, usuario, fecha
-- Botón "Sugerencia" accesible desde el sidebar (visible a todos los roles)
-- Modal para enviar: seleccionar categoría + escribir mensaje
-- Página `/suggestions` solo para admin: listado con filtros por categoría y estado
+- Tabla `suggestions`: categoría, mensaje, estado, usuario, fecha
+- Botón "Enviar sugerencia" en el sidebar (visible a todos los roles)
+- Modal para enviar: seleccionar categoría + escribir mensaje + confirmación
+- Página `/suggestions` solo para admin: listado filtrable por categoría y estado
 - Admin puede cambiar estado: Pendiente → Revisado → Descartado
-- Confirmación visual al enviar
 
 ### No incluye
 - Respuestas del admin al usuario
