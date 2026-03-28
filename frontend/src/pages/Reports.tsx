@@ -56,7 +56,7 @@ function exportGeneralPDF(sessions: any[], dateFrom: string, dateTo: string) {
   doc.save(`reporte-general-${dateFrom}-${dateTo}.pdf`);
 }
 
-function exportGroupPDF(sessions: any[], groupName: string, dateFrom: string, dateTo: string) {
+function exportGroupPDF(sessions: any[], groupName: string, dateFrom: string, dateTo: string, allGroupStudents: any[] = []) {
   const doc = new jsPDF();
   pdfHeader(doc, `Reporte por Grupo: ${groupName}`, dateFrom, dateTo);
   const studentMap: Record<string, { name: string; code: string; present: number; absent: number; excused: number }> = {};
@@ -70,18 +70,29 @@ function exportGroupPDF(sessions: any[], groupName: string, dateFrom: string, da
       else studentMap[id].excused++;
     });
   });
+  // Agregar estudiantes del grupo sin ningún registro
+  allGroupStudents.forEach((s: any) => {
+    if (!studentMap[s.id]) studentMap[s.id] = { name: s.full_name, code: s.student_code, present: 0, absent: 0, excused: 0 };
+  });
   const rows = Object.values(studentMap)
     .sort((a, b) => a.name.localeCompare(b.name))
     .map(r => {
       const total = r.present + r.absent + r.excused;
-      return [r.name, r.code, r.present, r.absent, r.excused, `${pct(r.present, total)}%`];
+      const sinRegistro = total === 0;
+      return [r.name, r.code, r.present, r.absent, r.excused, sinRegistro ? 'Sin registro' : `${pct(r.present, total)}%`];
     });
   autoTable(doc, {
     startY: 50,
-    head: [['Estudiante', 'Código', 'Presentes', 'Ausentes', 'Excusados', '% Asistencia']],
+    head: [['Estudiante', 'Código', 'Presentes', 'Ausentes', 'Excusados', '% / Estado']],
     body: rows,
     styles: { fontSize: 9 },
     headStyles: { fillColor: [30, 64, 175] },
+    didParseCell: (data: any) => {
+      if (data.column.index === 5 && data.section === 'body' && data.cell.raw === 'Sin registro') {
+        data.cell.styles.textColor = [156, 163, 175];
+        data.cell.styles.fontStyle = 'italic';
+      }
+    },
   });
   doc.save(`reporte-grupo-${groupName}-${dateFrom}-${dateTo}.pdf`);
 }
@@ -135,6 +146,13 @@ export default function Reports() {
     queryFn: async () => { const { data } = await studentAPI.getAll({ is_active: true }); return data; },
   });
 
+  // Estudiantes del grupo seleccionado (para detectar "sin registro")
+  const { data: groupStudents = [] } = useQuery({
+    queryKey: ['students-group', selectedGroup],
+    queryFn: async () => { const { data } = await studentAPI.getAll({ group_id: selectedGroup, is_active: true }); return data ?? []; },
+    enabled: !!selectedGroup,
+  });
+
   const { data: reportData, isLoading } = useQuery({
     queryKey: ['report', reportType, dateFrom, dateTo, selectedGroup, selectedStudent],
     queryFn: async () => {
@@ -161,7 +179,7 @@ export default function Reports() {
         exportGeneralPDF(sessions, dateFrom, dateTo);
       } else if (reportType === 'group') {
         const groupName = (groups as any[]).find(g => g.id === selectedGroup)?.name || selectedGroup;
-        exportGroupPDF(sessions, groupName, dateFrom, dateTo);
+        exportGroupPDF(sessions, groupName, dateFrom, dateTo, groupStudents);
       } else if (reportType === 'student') {
         const studentName = (students as any[]).find(s => s.id === selectedStudent)?.full_name || selectedStudent;
         exportStudentPDF(sessions, studentName, dateFrom, dateTo);
@@ -280,7 +298,7 @@ export default function Reports() {
           ) : reportType === 'general' ? (
             <GeneralReport sessions={sessions} />
           ) : reportType === 'group' ? (
-            <GroupReport sessions={sessions} />
+            <GroupReport sessions={sessions} groupStudents={groupStudents} />
           ) : (
             <StudentReport records={sessions} />
           )
@@ -295,13 +313,15 @@ function GeneralReport({ sessions }: { sessions: any[] }) {
   const allRecords = sessions.flatMap(s => s.attendance_records || []);
   const totalPresent = allRecords.filter(r => r.status === 'presente').length;
   const totalRecords = allRecords.length;
+  const totalSR = sessions.reduce((acc, s) => acc + (s.sin_registro ?? 0), 0);
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard label="Sesiones" value={totalSessions} color="blue" />
-        <StatCard label="Registros" value={totalRecords} color="gray" />
+      <div className="grid grid-cols-4 gap-3">
+        <StatCard label="Sesiones"   value={totalSessions}                      color="blue" />
+        <StatCard label="Registros"  value={totalRecords}                       color="gray" />
         <StatCard label="Asistencia" value={`${pct(totalPresent, totalRecords)}%`} color="green" />
+        <StatCard label="Sin reg."   value={totalSR}                            color={totalSR > 0 ? 'orange' : 'gray'} />
       </div>
       <div className="card overflow-hidden">
         <table className="w-full text-sm">
@@ -309,9 +329,10 @@ function GeneralReport({ sessions }: { sessions: any[] }) {
             <tr>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Fecha</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Grupo</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">P</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">A</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">E</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-green-600 uppercase">P</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-red-600 uppercase">A</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-yellow-600 uppercase">E</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase">SR</th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">%</th>
             </tr>
           </thead>
@@ -321,6 +342,7 @@ function GeneralReport({ sessions }: { sessions: any[] }) {
               const p = records.filter((r: any) => r.status === 'presente').length;
               const a = records.filter((r: any) => r.status === 'ausente').length;
               const e = records.filter((r: any) => r.status === 'excusado').length;
+              const sr = s.sin_registro ?? 0;
               return (
                 <tr key={s.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-800">
@@ -330,19 +352,20 @@ function GeneralReport({ sessions }: { sessions: any[] }) {
                   <td className="px-4 py-3 text-center text-green-700 font-medium">{p}</td>
                   <td className="px-4 py-3 text-center text-red-700 font-medium">{a}</td>
                   <td className="px-4 py-3 text-center text-yellow-700 font-medium">{e}</td>
-                  <td className="px-4 py-3 text-right font-semibold">{pct(p, records.length)}%</td>
+                  <td className="px-4 py-3 text-center text-gray-400 font-medium">{sr > 0 ? sr : '—'}</td>
+                  <td className="px-4 py-3 text-right font-semibold">{records.length ? `${pct(p, records.length)}%` : '—'}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
+      <p className="text-xs text-gray-400 px-1">P = Presente · A = Ausente · E = Excusado · SR = Sin registro</p>
     </div>
   );
 }
 
-function GroupReport({ sessions }: { sessions: any[] }) {
-  // Agrupar por estudiante
+function GroupReport({ sessions, groupStudents }: { sessions: any[]; groupStudents: any[] }) {
   const studentMap: Record<string, { name: string; code: string; present: number; absent: number; excused: number }> = {};
   sessions.forEach(s => {
     (s.attendance_records || []).forEach((r: any) => {
@@ -354,12 +377,20 @@ function GroupReport({ sessions }: { sessions: any[] }) {
       else if (r.status === 'excusado') studentMap[id].excused++;
     });
   });
+  // Agregar estudiantes del grupo sin ningún registro
+  groupStudents.forEach((s: any) => {
+    if (!studentMap[s.id]) studentMap[s.id] = { name: s.full_name, code: s.student_code, present: 0, absent: 0, excused: 0 };
+  });
   const rows = Object.values(studentMap).sort((a, b) => a.name.localeCompare(b.name));
+  const sinRegistro = rows.filter(r => r.present + r.absent + r.excused === 0).length;
 
   return (
     <div className="card overflow-hidden">
-      <div className="px-4 py-3 border-b bg-gray-50">
+      <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between">
         <p className="text-sm font-semibold text-gray-700">{sessions.length} sesiones · {rows.length} estudiantes</p>
+        {sinRegistro > 0 && (
+          <span className="text-xs text-gray-400 italic">{sinRegistro} sin registro</span>
+        )}
       </div>
       <table className="w-full text-sm">
         <thead className="bg-gray-50 border-b">
@@ -374,26 +405,32 @@ function GroupReport({ sessions }: { sessions: any[] }) {
         <tbody className="divide-y divide-gray-100">
           {rows.map((r, i) => {
             const total = r.present + r.absent + r.excused;
+            const sinReg = total === 0;
             const p = pct(r.present, total);
             return (
-              <tr key={i} className="hover:bg-gray-50">
+              <tr key={i} className={`hover:bg-gray-50 ${sinReg ? 'opacity-50' : ''}`}>
                 <td className="px-4 py-3">
                   <p className="font-medium text-gray-900">{r.name}</p>
                   <p className="text-xs text-gray-400">{r.code}</p>
                 </td>
-                <td className="px-4 py-3 text-center text-green-700 font-medium">{r.present}</td>
-                <td className="px-4 py-3 text-center text-red-700 font-medium">{r.absent}</td>
-                <td className="px-4 py-3 text-center text-yellow-700 font-medium">{r.excused}</td>
+                <td className="px-4 py-3 text-center text-green-700 font-medium">{sinReg ? '—' : r.present}</td>
+                <td className="px-4 py-3 text-center text-red-700 font-medium">{sinReg ? '—' : r.absent}</td>
+                <td className="px-4 py-3 text-center text-yellow-700 font-medium">{sinReg ? '—' : r.excused}</td>
                 <td className="px-4 py-3 text-right">
-                  <span className={`font-bold ${p >= 75 ? 'text-green-600' : p >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
-                    {p}%
-                  </span>
+                  {sinReg ? (
+                    <span className="text-xs text-gray-400 italic">Sin registro</span>
+                  ) : (
+                    <span className={`font-bold ${p >= 75 ? 'text-green-600' : p >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      {p}%
+                    </span>
+                  )}
                 </td>
               </tr>
             );
           })}
         </tbody>
       </table>
+      <p className="text-xs text-gray-400 px-4 py-2 border-t">P = Presente · A = Ausente · E = Excusado</p>
     </div>
   );
 }
@@ -437,16 +474,20 @@ function StudentReport({ records }: { records: any[] }) {
           </tbody>
         </table>
       </div>
+      <p className="text-xs text-gray-400 px-1 mt-1">
+        Las sesiones en las que el estudiante no fue registrado no aparecen en este listado.
+      </p>
     </div>
   );
 }
 
 function StatCard({ label, value, color }: { label: string; value: string | number; color: string }) {
   const colors: Record<string, string> = {
-    blue:  'bg-blue-50 text-blue-700',
-    green: 'bg-green-50 text-green-700',
-    gray:  'bg-gray-50 text-gray-700',
-    red:   'bg-red-50 text-red-700',
+    blue:   'bg-blue-50 text-blue-700',
+    green:  'bg-green-50 text-green-700',
+    gray:   'bg-gray-50 text-gray-700',
+    red:    'bg-red-50 text-red-700',
+    orange: 'bg-orange-50 text-orange-700',
   };
   return (
     <div className={`rounded-xl p-4 text-center ${colors[color] || colors.gray}`}>
