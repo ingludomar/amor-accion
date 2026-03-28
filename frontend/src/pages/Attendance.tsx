@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
+import QrScanner from '../components/QrScanner';
 import { groupAPI, topicAPI, sessionAPI, studentAPI, Group, Topic, ClassSession, AttendanceStatus } from '../lib/supabaseApi';
 import { supabase } from '../lib/supabaseClient';
 import {
   ClipboardList, ChevronRight, CheckCircle2, XCircle, Clock,
   Users, Calendar, BookOpen, Play, RotateCcw, ChevronDown,
-  History, ChevronUp, Filter,
+  History, ChevronUp, Filter, QrCode,
 } from 'lucide-react';
 
 // ─── Tipos locales ────────────────────────────────────────────────
@@ -184,6 +185,8 @@ export default function Attendance() {
   const [activeSession, setActiveSession] = useState<ClassSession | null>(null);
   const [attendance, setAttendance]   = useState<Record<string, AttendanceStatus>>({});
   const [saving, setSaving]           = useState<string | null>(null);  // student_id que se está guardando
+  const [qrOpen, setQrOpen]           = useState(false);
+  const [qrResult, setQrResult]       = useState<{ name: string; status: 'success' | 'already' | 'not_found' } | null>(null);
 
   // ─── Queries ──────────────────────────────────────────────────
   const { data: groups = [] } = useQuery({
@@ -297,6 +300,21 @@ export default function Attendance() {
       setSaving(null);
     }
   };
+
+  // ─── Escaneo QR ───────────────────────────────────────────────
+  const handleQrScan = useCallback((studentCode: string) => {
+    const student = students.find((s: any) => s.student_code === studentCode);
+    if (!student) {
+      setQrResult({ name: studentCode, status: 'not_found' });
+      return;
+    }
+    if (attendance[student.id] === 'presente') {
+      setQrResult({ name: student.full_name, status: 'already' });
+      return;
+    }
+    setQrResult({ name: student.full_name, status: 'success' });
+    markStudent(student.id, 'presente');
+  }, [students, attendance, activeSession]);
 
   // ─── Estadísticas ─────────────────────────────────────────────
   const total     = students.length;
@@ -465,12 +483,20 @@ export default function Attendance() {
                 {new Date(setup.session_date + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
             </div>
-            <button
-              onClick={() => setStep('setup')}
-              className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-xl"
-            >
-              <RotateCcw className="w-4 h-4" /> Nueva
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { setQrResult(null); setQrOpen(true); }}
+                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-xl font-medium"
+              >
+                <QrCode className="w-4 h-4" /> QR
+              </button>
+              <button
+                onClick={() => setStep('setup')}
+                className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-xl"
+              >
+                <RotateCcw className="w-4 h-4" /> Nueva
+              </button>
+            </div>
           </div>
 
           {/* Barra de progreso */}
@@ -598,6 +624,14 @@ export default function Attendance() {
           </div>
         )}
       </div>
+
+      {qrOpen && (
+        <QrScanner
+          onScan={handleQrScan}
+          onClose={() => setQrOpen(false)}
+          lastResult={qrResult}
+        />
+      )}
     </Layout>
   );
 }
