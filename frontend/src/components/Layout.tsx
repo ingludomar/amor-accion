@@ -4,9 +4,11 @@ import { useAuthStore } from '../store/authStore';
 import { usePermission } from '../hooks/usePermission';
 import { getLogoUrl } from '../lib/storageApi';
 import SuggestionModal from './SuggestionModal';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import {
   LogOut, School, Building2, Users, ClipboardList, BarChart3,
   BookOpen, Menu, X, UserCircle, Settings, UserCheck, ShieldCheck, MessageSquare,
+  Download,
 } from 'lucide-react';
 
 interface LayoutProps { children: ReactNode; }
@@ -19,6 +21,7 @@ export default function Layout({ children }: LayoutProps) {
   const [logoUrl, setLogoUrl]                 = useState<string | null>(null);
   const [logoError, setLogoError]             = useState(false);
   const [suggestionOpen, setSuggestionOpen]   = useState(false);
+  const { canInstall, install: handleInstall } = useInstallPrompt();
 
   const dashboard  = usePermission('dashboard');
   const campuses   = usePermission('campuses');
@@ -103,6 +106,13 @@ export default function Layout({ children }: LayoutProps) {
             <p className="text-xs text-gray-400 capitalize">{user?.role || '—'}</p>
           </div>
         </div>
+        {canInstall && (
+          <button onClick={() => { handleInstall(); setSidebarOpen(false); }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-green-600 hover:bg-green-50 transition">
+            <Download className="w-4 h-4" />
+            Instalar app
+          </button>
+        )}
         <button onClick={() => { setSuggestionOpen(true); setSidebarOpen(false); }}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-amber-600 hover:bg-amber-50 transition">
           <MessageSquare className="w-4 h-4" />
