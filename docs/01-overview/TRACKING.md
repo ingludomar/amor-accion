@@ -10,7 +10,7 @@
 ```
 ╔══════════════════════════════════════════════════════════════╗
 ║  AMOR ACCIÓN - SISTEMA DE ASISTENCIA                         ║
-║  Progreso General: 85%                                       ║
+║  Progreso General: 88%                                       ║
 ║  Estado: 🟢 En Producción / Desarrollo activo               ║
 ║  URL Producción: https://amor-accion.vercel.app              ║
 ║  Rama principal: main                                        ║
@@ -50,6 +50,7 @@
 | 4 | Dashboard con datos reales | dev-feature-dashboard-real | Mar 2026 |
 | 5 | Cambio de contraseña | dev-feature-cambio-password | Mar 2026 |
 | 6 | Sistema de calificaciones + escala parametrizable | dev-feature-calificaciones | Mar 2026 |
+| 7 | Reportes + exportación PDF + sin registro | dev-feature-reportes | Mar 2026 |
 
 ---
 
@@ -59,7 +60,6 @@ Ver [BACKLOG.md](./BACKLOG.md) para el detalle completo.
 
 | # | Feature | Prioridad |
 |---|---------|-----------|
-| 7 | Reportes + exportación PDF | 🟡 Media |
 | 8 | Escaneo QR en asistencia | 🟡 Media |
 | 9 | Alertas de inasistencia | 🟢 Baja |
 | 10 | PWA instalable | 🟢 Baja |
