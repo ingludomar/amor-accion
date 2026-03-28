@@ -2,13 +2,115 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Layout from '../components/Layout';
 import { reportAPI, groupAPI, studentAPI } from '../lib/supabaseApi';
-import { BarChart3, Calendar, Users, User, TrendingUp } from 'lucide-react';
+import { BarChart3, Calendar, Users, User, TrendingUp, FileDown } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 type ReportType = 'general' | 'group' | 'student';
 
 function pct(present: number, total: number) {
   if (!total) return 0;
   return Math.round((present / total) * 100);
+}
+
+// ── Helpers de exportación PDF ────────────────────────────────────
+
+function pdfHeader(doc: jsPDF, title: string, dateFrom: string, dateTo: string) {
+  doc.setFontSize(16);
+  doc.setTextColor(30, 64, 175); // azul
+  doc.text('Amor Acción — Sistema de Asistencia', 14, 18);
+  doc.setFontSize(12);
+  doc.setTextColor(55, 65, 81); // gris oscuro
+  doc.text(title, 14, 28);
+  doc.setFontSize(9);
+  doc.setTextColor(107, 114, 128); // gris
+  doc.text(
+    `Período: ${new Date(dateFrom + 'T00:00:00').toLocaleDateString('es-CO')} — ${new Date(dateTo + 'T00:00:00').toLocaleDateString('es-CO')}`,
+    14, 36
+  );
+  doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, 14, 42);
+}
+
+function exportGeneralPDF(sessions: any[], dateFrom: string, dateTo: string) {
+  const doc = new jsPDF();
+  pdfHeader(doc, 'Reporte General de Asistencia', dateFrom, dateTo);
+  const rows = sessions.map(s => {
+    const records = s.attendance_records || [];
+    const p = records.filter((r: any) => r.status === 'presente').length;
+    const a = records.filter((r: any) => r.status === 'ausente').length;
+    const e = records.filter((r: any) => r.status === 'excusado').length;
+    return [
+      new Date(s.session_date + 'T00:00:00').toLocaleDateString('es-CO'),
+      s.group?.name || '-',
+      p, a, e,
+      `${pct(p, records.length)}%`,
+    ];
+  });
+  autoTable(doc, {
+    startY: 50,
+    head: [['Fecha', 'Grupo', 'Presentes', 'Ausentes', 'Excusados', '% Asistencia']],
+    body: rows,
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [30, 64, 175] },
+  });
+  doc.save(`reporte-general-${dateFrom}-${dateTo}.pdf`);
+}
+
+function exportGroupPDF(sessions: any[], groupName: string, dateFrom: string, dateTo: string) {
+  const doc = new jsPDF();
+  pdfHeader(doc, `Reporte por Grupo: ${groupName}`, dateFrom, dateTo);
+  const studentMap: Record<string, { name: string; code: string; present: number; absent: number; excused: number }> = {};
+  sessions.forEach(s => {
+    (s.attendance_records || []).forEach((r: any) => {
+      const id = r.student?.id;
+      if (!id) return;
+      if (!studentMap[id]) studentMap[id] = { name: r.student.full_name, code: r.student.student_code, present: 0, absent: 0, excused: 0 };
+      if (r.status === 'presente') studentMap[id].present++;
+      else if (r.status === 'ausente') studentMap[id].absent++;
+      else studentMap[id].excused++;
+    });
+  });
+  const rows = Object.values(studentMap)
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(r => {
+      const total = r.present + r.absent + r.excused;
+      return [r.name, r.code, r.present, r.absent, r.excused, `${pct(r.present, total)}%`];
+    });
+  autoTable(doc, {
+    startY: 50,
+    head: [['Estudiante', 'Código', 'Presentes', 'Ausentes', 'Excusados', '% Asistencia']],
+    body: rows,
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [30, 64, 175] },
+  });
+  doc.save(`reporte-grupo-${groupName}-${dateFrom}-${dateTo}.pdf`);
+}
+
+function exportStudentPDF(records: any[], studentName: string, dateFrom: string, dateTo: string) {
+  const doc = new jsPDF();
+  pdfHeader(doc, `Reporte de Estudiante: ${studentName}`, dateFrom, dateTo);
+  const rows = records.map((r: any) => [
+    new Date((r.session?.session_date || '') + 'T00:00:00').toLocaleDateString('es-CO'),
+    r.session?.group?.name || '-',
+    r.status.charAt(0).toUpperCase() + r.status.slice(1),
+  ]);
+  autoTable(doc, {
+    startY: 50,
+    head: [['Fecha', 'Grupo', 'Estado']],
+    body: rows,
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [30, 64, 175] },
+    bodyStyles: { cellPadding: 3 },
+    didParseCell: (data: any) => {
+      if (data.column.index === 2 && data.section === 'body') {
+        const v = data.cell.raw as string;
+        if (v === 'Presente') data.cell.styles.textColor = [22, 163, 74];
+        else if (v === 'Ausente') data.cell.styles.textColor = [220, 38, 38];
+        else data.cell.styles.textColor = [202, 138, 4];
+      }
+    },
+  });
+  doc.save(`reporte-estudiante-${studentName}-${dateFrom}-${dateTo}.pdf`);
 }
 
 export default function Reports() {
@@ -21,6 +123,7 @@ export default function Reports() {
   const [selectedGroup, setSelectedGroup] = useState('');
   const [selectedStudent, setSelectedStudent] = useState('');
   const [showReport, setShowReport] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const { data: groups = [] } = useQuery({
     queryKey: ['groups'],
@@ -49,6 +152,24 @@ export default function Reports() {
     (reportType === 'general') ||
     (reportType === 'group' && selectedGroup) ||
     (reportType === 'student' && selectedStudent);
+
+  function handleExportPDF() {
+    if (!sessions.length) return;
+    setExporting(true);
+    try {
+      if (reportType === 'general') {
+        exportGeneralPDF(sessions, dateFrom, dateTo);
+      } else if (reportType === 'group') {
+        const groupName = (groups as any[]).find(g => g.id === selectedGroup)?.name || selectedGroup;
+        exportGroupPDF(sessions, groupName, dateFrom, dateTo);
+      } else if (reportType === 'student') {
+        const studentName = (students as any[]).find(s => s.id === selectedStudent)?.full_name || selectedStudent;
+        exportStudentPDF(sessions, studentName, dateFrom, dateTo);
+      }
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <Layout>
@@ -123,14 +244,26 @@ export default function Reports() {
             </div>
           )}
 
-          <button
-            disabled={!canGenerate}
-            onClick={() => setShowReport(true)}
-            className="btn-primary w-full"
-          >
-            <BarChart3 className="w-5 h-5" />
-            Generar reporte
-          </button>
+          <div className="flex gap-3">
+            <button
+              disabled={!canGenerate}
+              onClick={() => setShowReport(true)}
+              className="btn-primary flex-1"
+            >
+              <BarChart3 className="w-5 h-5" />
+              Generar reporte
+            </button>
+            {showReport && sessions.length > 0 && (
+              <button
+                onClick={handleExportPDF}
+                disabled={exporting}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-green-500 text-green-700 font-semibold hover:bg-green-50 transition text-sm flex-shrink-0"
+              >
+                <FileDown className="w-4 h-4" />
+                {exporting ? 'Exportando…' : 'PDF'}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Resultados */}

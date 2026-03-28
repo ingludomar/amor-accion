@@ -157,3 +157,31 @@ Convertir la app en una Progressive Web App para que pueda instalarse como app n
 - Útil para profesores que usan el celular para tomar asistencia
 
 ---
+
+## Feature 11 — Buzón de sugerencias
+
+**Prioridad:** 🟡 Media
+**Rama:** `dev-feature-buzon-sugerencias`
+
+### Descripción
+Canal interno para que cualquier usuario envíe ideas, reportes de error o comentarios sobre la app. El admin las gestiona desde una página dedicada.
+
+### Categorías
+- **Nueva función** — ideas de cosas que quisieran tener
+- **Mejora** — algo que ya existe pero podría funcionar mejor
+- **Error** — algo que no funciona como debería
+- **Comentario general** — cualquier otra observación
+
+### Alcance
+- Tabla `suggestions` en Supabase: categoría, mensaje, estado, usuario, fecha
+- Botón "Sugerencia" accesible desde el sidebar (visible a todos los roles)
+- Modal para enviar: seleccionar categoría + escribir mensaje
+- Página `/suggestions` solo para admin: listado con filtros por categoría y estado
+- Admin puede cambiar estado: Pendiente → Revisado → Descartado
+- Confirmación visual al enviar
+
+### No incluye
+- Respuestas del admin al usuario
+- Notificaciones por email
+
+---
