@@ -18,7 +18,7 @@
 | 7 | Reportes + exportación PDF + sin registro | ✅ Completo | dev-feature-reportes | Mar 2026 |
 | 8 | Escaneo QR en asistencia | ✅ Completo | dev-feature-qr-asistencia | Mar 2026 |
 | 9 | Alertas de inasistencia (consecutivas + anual) | ✅ Completo | dev-feature-alertas | Mar 2026 |
-| 10 | PWA instalable | 🟢 Pendiente | dev-feature-pwa | — |
+| 10 | PWA instalable | ✅ Completo | dev-feature-pwa | Mar 2026 |
 | 11 | Buzón de sugerencias | ✅ Completo | dev-feature-buzon-sugerencias | Mar 2026 |
 
 ---
