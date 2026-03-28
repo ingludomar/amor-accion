@@ -1,7 +1,7 @@
 # TRACKING DE PROGRESO - Amor Acción
 
 > Fuente de verdad del estado actual del proyecto. Actualizar al finalizar cada feature.
-> **Última actualización:** 27 Mar 2026
+> **Última actualización:** 27 Mar 2026 (Feature 11)
 
 ---
 
@@ -10,7 +10,7 @@
 ```
 ╔══════════════════════════════════════════════════════════════╗
 ║  AMOR ACCIÓN - SISTEMA DE ASISTENCIA                         ║
-║  Progreso General: 88%                                       ║
+║  Progreso General: 93%                                       ║
 ║  Estado: 🟢 En Producción / Desarrollo activo               ║
 ║  URL Producción: https://amor-accion.vercel.app              ║
 ║  Rama principal: main                                        ║
@@ -36,7 +36,8 @@
 | Años escolares  | ✅ Completo   | |
 | Configuración   | ✅ Completo   | |
 | Asistencia      | ✅ Completo   | Tomar asistencia + Historial |
-| **Reportes**    | ❌ Pendiente  | Ver BACKLOG |
+| Reportes        | ✅ Completo   | PDF export + sin registro |
+| Buzón sugerencias | ✅ Completo | Modal para todos, gestión para admin |
 
 ---
 
@@ -51,6 +52,7 @@
 | 5 | Cambio de contraseña | dev-feature-cambio-password | Mar 2026 |
 | 6 | Sistema de calificaciones + escala parametrizable | dev-feature-calificaciones | Mar 2026 |
 | 7 | Reportes + exportación PDF + sin registro | dev-feature-reportes | Mar 2026 |
+| 11 | Buzón de sugerencias | dev-feature-buzon-sugerencias | Mar 2026 |
 
 ---
 
@@ -63,6 +65,7 @@ Ver [BACKLOG.md](./BACKLOG.md) para el detalle completo.
 | 8 | Escaneo QR en asistencia | 🟡 Media |
 | 9 | Alertas de inasistencia | 🟢 Baja |
 | 10 | PWA instalable | 🟢 Baja |
+| 11 | ~~Buzón de sugerencias~~ | ✅ Completo |
 
 ---
 
@@ -112,3 +115,6 @@ Ver [BACKLOG.md](./BACKLOG.md) para el detalle completo.
 - `class_sessions` — sesiones de clase
 - `attendance_records` — registros de asistencia
 - `school_years` — años escolares
+- `grades` — calificaciones por estudiante y tema
+- `grade_scale` — escala de calificaciones parametrizable
+- `suggestions` — buzón de sugerencias
