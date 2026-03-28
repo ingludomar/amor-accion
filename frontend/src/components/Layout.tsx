@@ -3,9 +3,10 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { usePermission } from '../hooks/usePermission';
 import { getLogoUrl } from '../lib/storageApi';
+import SuggestionModal from './SuggestionModal';
 import {
   LogOut, School, Building2, Users, ClipboardList, BarChart3,
-  BookOpen, Menu, X, UserCircle, Settings, UserCheck, ShieldCheck,
+  BookOpen, Menu, X, UserCircle, Settings, UserCheck, ShieldCheck, MessageSquare,
 } from 'lucide-react';
 
 interface LayoutProps { children: ReactNode; }
@@ -14,9 +15,10 @@ export default function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuthStore();
   const navigate         = useNavigate();
   const location         = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [logoUrl, setLogoUrl]         = useState<string | null>(null);
-  const [logoError, setLogoError]     = useState(false);
+  const [sidebarOpen, setSidebarOpen]         = useState(false);
+  const [logoUrl, setLogoUrl]                 = useState<string | null>(null);
+  const [logoError, setLogoError]             = useState(false);
+  const [suggestionOpen, setSuggestionOpen]   = useState(false);
 
   const dashboard  = usePermission('dashboard');
   const campuses   = usePermission('campuses');
@@ -27,7 +29,8 @@ export default function Layout({ children }: LayoutProps) {
   const reports    = usePermission('reports');
   const users      = usePermission('users');
   const settings   = usePermission('settings');
-  const roles      = usePermission('roles');
+  const roles       = usePermission('roles');
+  const suggestions = usePermission('suggestions');
 
   useEffect(() => { setLogoUrl(getLogoUrl()); }, []);
 
@@ -43,7 +46,8 @@ export default function Layout({ children }: LayoutProps) {
     { name: 'Sedes',         href: '/campuses',   icon: Building2,    show: campuses.canView },
     { name: 'Usuarios',      href: '/users',      icon: UserCheck,    show: users.canView },
     { name: 'Roles',         href: '/roles',      icon: ShieldCheck,  show: roles.canView },
-    { name: 'Configuración', href: '/settings',   icon: Settings,     show: settings.canView },
+    { name: 'Configuración', href: '/settings',     icon: Settings,      show: settings.canView },
+    { name: 'Sugerencias',   href: '/suggestions',  icon: MessageSquare, show: suggestions.canView },
   ];
 
   const navigation = allNavItems.filter(i => i.show);
@@ -99,6 +103,11 @@ export default function Layout({ children }: LayoutProps) {
             <p className="text-xs text-gray-400 capitalize">{user?.role || '—'}</p>
           </div>
         </div>
+        <button onClick={() => { setSuggestionOpen(true); setSidebarOpen(false); }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-amber-600 hover:bg-amber-50 transition">
+          <MessageSquare className="w-4 h-4" />
+          Enviar sugerencia
+        </button>
         <button onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition">
           <LogOut className="w-4 h-4" />
@@ -150,6 +159,8 @@ export default function Layout({ children }: LayoutProps) {
           {children}
         </main>
       </div>
+
+      {suggestionOpen && <SuggestionModal onClose={() => setSuggestionOpen(false)} />}
     </div>
   );
 }

@@ -955,6 +955,47 @@ export const gradeScaleAPI = {
   },
 };
 
+// ============================================
+// SUGGESTIONS API
+// ============================================
+
+export type SuggestionCategory = 'nueva_funcion' | 'mejora' | 'error' | 'comentario';
+export type SuggestionStatus   = 'pendiente' | 'revisado' | 'descartado';
+
+export interface Suggestion {
+  id: string;
+  category: SuggestionCategory;
+  message: string;
+  status: SuggestionStatus;
+  created_by?: string;
+  user_name?: string;
+  created_at: string;
+}
+
+export const suggestionAPI = {
+  create: async (category: SuggestionCategory, message: string, userName: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from('suggestions').insert({
+      category, message, created_by: user?.id, user_name: userName,
+    });
+    if (error) throw error;
+  },
+
+  getAll: async (filters?: { status?: SuggestionStatus; category?: SuggestionCategory }) => {
+    let query = supabase.from('suggestions').select('*').order('created_at', { ascending: false });
+    if (filters?.status)   query = query.eq('status', filters.status);
+    if (filters?.category) query = query.eq('category', filters.category);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as Suggestion[];
+  },
+
+  updateStatus: async (id: string, status: SuggestionStatus) => {
+    const { error } = await supabase.from('suggestions').update({ status }).eq('id', id);
+    if (error) throw error;
+  },
+};
+
 export default {
   campusAPI,
   studentAPI,
@@ -967,5 +1008,6 @@ export default {
   userAPI,
   gradeAPI,
   gradeScaleAPI,
+  suggestionAPI,
 };
 

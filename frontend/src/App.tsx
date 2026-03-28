@@ -16,6 +16,7 @@ import Students from './pages/Students';
 import Attendance from './pages/Attendance';
 import Settings from './pages/Settings';
 import Roles from './pages/Roles';
+import Suggestions from './pages/Suggestions';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Create a client
@@ -120,6 +121,15 @@ function App() {
             element={
               <ProtectedRoute module="roles">
                 <Roles />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/suggestions"
+            element={
+              <ProtectedRoute module="suggestions">
+                <Suggestions />
               </ProtectedRoute>
             }
           />
