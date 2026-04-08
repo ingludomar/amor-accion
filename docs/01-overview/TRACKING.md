@@ -57,6 +57,7 @@
 | 14 | Alertas de inasistencia (consecutivas + anual) | dev-feature-alertas | Mar 2026 |
 | 15 | PWA instalable | dev-feature-pwa | Mar 2026 |
 | 16 | Login con username | dev-feature-login-username | Abr 2026 |
+| 17 | Boletín de calificaciones PDF | dev-feature-boletin-pdf | Abr 2026 |
 
 ---
 
