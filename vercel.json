@@ -7,12 +7,26 @@
       "config": {
         "distDir": "dist"
       }
+    },
+    {
+      "src": "api/ping.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
+      "src": "/api/ping",
+      "dest": "api/ping.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "frontend/dist/$1"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/ping",
+      "schedule": "0 8 */5 * *"
     }
   ],
   "env": {
