@@ -1,7 +1,7 @@
 # BACKLOG - Amor Acción
 
 > Registro completo de todos los features del proyecto. Ver [TRACKING.md](./TRACKING.md) para el estado general.
-> **Última actualización:** 28 Mar 2026
+> **Última actualización:** 07 Abr 2026
 
 ---
 
@@ -20,6 +20,7 @@
 | 9 | Alertas de inasistencia (consecutivas + anual) | ✅ Completo | dev-feature-alertas | Mar 2026 |
 | 10 | PWA instalable | ✅ Completo | dev-feature-pwa | Mar 2026 |
 | 11 | Buzón de sugerencias | ✅ Completo | dev-feature-buzon-sugerencias | Mar 2026 |
+| 12 | Login con username | ✅ Completo | dev-feature-login-username | Abr 2026 |
 
 ---
 

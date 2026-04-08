@@ -56,6 +56,7 @@
 | 13 | Escaneo QR en asistencia | dev-feature-qr-asistencia | Mar 2026 |
 | 14 | Alertas de inasistencia (consecutivas + anual) | dev-feature-alertas | Mar 2026 |
 | 15 | PWA instalable | dev-feature-pwa | Mar 2026 |
+| 16 | Login con username | dev-feature-login-username | Abr 2026 |
 
 ---
 
