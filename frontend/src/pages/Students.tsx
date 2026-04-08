@@ -6,12 +6,105 @@ import {
   studentAPI, campusAPI, guardianAPI, groupAPI, gradeAPI, appSettingsAPI, absenceAPI,
   Student, Guardian, CreateStudentRequest,
 } from '../lib/supabaseApi';
-import { useGradeScale } from '../hooks/useGradeScale';
+import { useGradeScale, DEFAULT_SCALE_MAP } from '../hooks/useGradeScale';
 import { supabase } from '../lib/supabaseClient';
 import {
   Plus, Search, X, Camera, UserPlus, Phone, MessageCircle,
-  ChevronRight, GraduationCap, Pencil, Trash2, CreditCard, Users, Star, Bell, AlertTriangle,
+  ChevronRight, GraduationCap, Pencil, Trash2, CreditCard, Users, Star, Bell, AlertTriangle, FileText,
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+// ─── Exportar boletín PDF ────────────────────────────────────────
+async function exportBoletinPDF(
+  student: Student & { group?: { name: string } },
+  grades: any[],
+  scaleMap: Record<number, { label: string }>,
+  campusName: string,
+) {
+  const doc = new jsPDF();
+
+  // Header
+  doc.setFontSize(18);
+  doc.setTextColor(30, 64, 175);
+  doc.text('Amor Acción', 14, 20);
+  doc.setFontSize(12);
+  doc.setTextColor(60, 60, 60);
+  doc.text('Boletín de Calificaciones', 14, 28);
+
+  // Info del estudiante
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  const year = new Date().getFullYear();
+  doc.text(`Año: ${year}`, 196, 20, { align: 'right' });
+  doc.text(`Generado: ${new Date().toLocaleDateString('es-CO')}`, 196, 26, { align: 'right' });
+
+  doc.setDrawColor(30, 64, 175);
+  doc.setLineWidth(0.5);
+  doc.line(14, 33, 196, 33);
+
+  doc.setFontSize(11);
+  doc.setTextColor(30, 30, 30);
+  doc.text(`Estudiante: ${student.full_name}`, 14, 42);
+  doc.text(`Código: ${student.student_code}`, 14, 49);
+  doc.text(`Grupo: ${student.group?.name || '—'}`, 14, 56);
+  doc.text(`Sede: ${campusName}`, 120, 42);
+
+  // Tabla de calificaciones
+  if (grades.length > 0) {
+    const rows = grades.map(g => [
+      g.topic?.group?.name || '—',
+      g.topic?.title || '—',
+      String(g.score),
+      scaleMap[g.score]?.label || String(g.score),
+      g.notes || '',
+    ]);
+
+    autoTable(doc, {
+      startY: 64,
+      head: [['Grupo', 'Tema', 'Nota', 'Concepto', 'Observaciones']],
+      body: rows,
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold' },
+      columnStyles: {
+        2: { halign: 'center', fontStyle: 'bold' },
+        3: { halign: 'center' },
+      },
+      didParseCell: (data: any) => {
+        if (data.section === 'body' && data.column.index === 2) {
+          const score = parseInt(data.cell.raw);
+          if (score >= 4) {
+            data.cell.styles.textColor = [22, 101, 52]; // verde
+          } else if (score === 3) {
+            data.cell.styles.textColor = [133, 100, 4]; // amarillo
+          } else {
+            data.cell.styles.textColor = [185, 28, 28]; // rojo
+          }
+        }
+      },
+    });
+
+    // Promedio
+    const avg = grades.reduce((sum: number, g: any) => sum + g.score, 0) / grades.length;
+    const finalY = (doc as any).lastAutoTable?.finalY || 100;
+    doc.setFontSize(10);
+    doc.setTextColor(30, 30, 30);
+    doc.text(`Promedio general: ${avg.toFixed(1)}`, 14, finalY + 10);
+    doc.text(`Total de temas evaluados: ${grades.length}`, 14, finalY + 17);
+  } else {
+    doc.setFontSize(10);
+    doc.setTextColor(150, 150, 150);
+    doc.text('No hay calificaciones registradas.', 14, 68);
+  }
+
+  // Pie de página
+  const pageH = doc.internal.pageSize.getHeight();
+  doc.setFontSize(8);
+  doc.setTextColor(150, 150, 150);
+  doc.text('Amor Acción — Sistema de Asistencia', 14, pageH - 10);
+
+  doc.save(`boletin-${student.student_code}-${year}.pdf`);
+}
 
 // ─── Alerta de inasistencia ──────────────────────────────────────
 function AbsenceAlert({ studentId, groupId }: { studentId: string; groupId?: string }) {
@@ -497,6 +590,16 @@ export default function Students() {
                 className="btn-secondary flex-1 text-sm py-2"
               >
                 <CreditCard className="w-4 h-4" /> Carnet
+              </button>
+              <button
+                onClick={async () => {
+                  const grades = await gradeAPI.getByStudent(activeStudent.id);
+                  const campus = campuses.find((c: any) => c.id === activeStudent.campus_id);
+                  exportBoletinPDF(activeStudent as any, grades, DEFAULT_SCALE_MAP, campus?.name || '—');
+                }}
+                className="btn-secondary flex-1 text-sm py-2 text-green-700 hover:bg-green-50"
+              >
+                <FileText className="w-4 h-4" /> Boletín
               </button>
               <button
                 onClick={() => {

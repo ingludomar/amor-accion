@@ -21,6 +21,11 @@ export const COLOR_CLASSES: Record<string, { bg: string; text: string; border: s
   gray:   { bg: 'bg-gray-100',   text: 'text-gray-700',   border: 'border-gray-300' },
 };
 
+// Mapa estático para uso fuera de hooks React (ej: exportar PDF)
+export const DEFAULT_SCALE_MAP: Record<number, { label: string }> = Object.fromEntries(
+  DEFAULT_SCALE.map(s => [s.score, { label: s.label }])
+);
+
 export function useGradeScale() {
   const { data = DEFAULT_SCALE } = useQuery({
     queryKey: ['grade-scale'],
