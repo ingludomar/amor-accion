@@ -417,32 +417,31 @@ export const attendanceAPI = {
 // UTILIDADES
 // ============================================
 
-async function generateStudentCode(campusId: string): Promise<string> {
+async function generateStudentCode(_campusId: string): Promise<string> {
   const year = new Date().getFullYear();
-  
-  // Obtener el último estudiante de este campus
+  const prefix = String(year);
+
+  // Buscar el código más alto del año actual en TODOS los estudiantes
   const { data, error } = await supabase
     .from('students')
     .select('student_code')
-    .eq('campus_id', campusId)
-    .order('created_at', { ascending: false })
+    .like('student_code', `${prefix}%`)
+    .order('student_code', { ascending: false })
     .limit(1);
-  
+
   if (error) {
-    // Si hay error, usar timestamp
-    return `${year}${Date.now().toString().slice(-4)}`;
+    return `${prefix}${Date.now().toString().slice(-4)}`;
   }
-  
+
   let sequence = 1;
   if (data && data.length > 0) {
-    const lastCode = data[0].student_code;
-    const lastSequence = parseInt(lastCode.slice(-4));
+    const lastSequence = parseInt(data[0].student_code.slice(-4));
     if (!isNaN(lastSequence)) {
       sequence = lastSequence + 1;
     }
   }
-  
-  return `${year}${sequence.toString().padStart(4, '0')}`;
+
+  return `${prefix}${sequence.toString().padStart(4, '0')}`;
 }
 
 // ============================================
