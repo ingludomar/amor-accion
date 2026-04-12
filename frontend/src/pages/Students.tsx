@@ -403,10 +403,18 @@ export default function Students() {
 
   const handleStudentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Limpiar campos vacíos para evitar "invalid input syntax for type date"
+    const cleaned = { ...studentForm } as any;
+    if (!cleaned.birth_date) cleaned.birth_date = null;
+    if (!cleaned.document_number) cleaned.document_number = null;
+    if (!cleaned.document_type) cleaned.document_type = null;
+    if (!cleaned.email) cleaned.email = null;
+    if (!cleaned.phone) cleaned.phone = null;
+
     if (isEditing && activeStudent) {
-      updateStudent.mutate({ id: activeStudent.id, data: studentForm });
+      updateStudent.mutate({ id: activeStudent.id, data: cleaned });
     } else {
-      createStudent.mutate(studentForm);
+      createStudent.mutate(cleaned);
     }
   };
 
