@@ -527,21 +527,21 @@ export default function Attendance() {
               <p className="text-yellow-500">Excusados</p>
             </div>
           </div>
-        </div>
 
-        {/* Búsqueda */}
-        {students.length > 0 && (
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar estudiante..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="input-field pl-9 py-2.5 text-sm"
-            />
-          </div>
-        )}
+          {/* Búsqueda */}
+          {students.length > 0 && (
+            <div className="relative mt-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar estudiante..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="input-field pl-9 py-2 text-sm"
+              />
+            </div>
+          )}
+        </div>
 
         {/* Lista de estudiantes */}
         {students.length === 0 ? (
