@@ -234,17 +234,20 @@ export const studentAPI = {
   },
 
   create: async (student: Omit<Student, 'id' | 'created_at' | 'student_code'>) => {
-    // Generar código de estudiante automáticamente
-    const studentCode = await generateStudentCode(student.campus_id);
-    
-    const { data, error } = await supabase
-      .from('students')
-      .insert({ ...student, student_code: studentCode })
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return { data, error: null };
+    // Intentar crear con código generado; reintentar si hay conflicto
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const studentCode = await generateStudentCode(student.campus_id);
+      const { data, error } = await supabase
+        .from('students')
+        .insert({ ...student, student_code: studentCode })
+        .select()
+        .single();
+
+      if (!error) return { data, error: null };
+      if (!error.message.includes('student_code_key')) throw error;
+      // Conflicto de código: reintentar con el siguiente número
+    }
+    throw new Error('No se pudo generar un código único. Intenta de nuevo.');
   },
 
   update: async (id: string, student: Partial<Student>) => {
