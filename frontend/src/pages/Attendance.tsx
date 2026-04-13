@@ -476,7 +476,7 @@ export default function Attendance() {
     <Layout>
       <div className="space-y-4 max-w-2xl mx-auto">
         {/* Header sticky */}
-        <div className="sticky top-16 z-30 bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100 p-4">
+        <div className="sticky top-0 md:top-0 z-30 bg-white/95 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h2 className="font-bold text-gray-900">{selectedGroup?.name}</h2>
