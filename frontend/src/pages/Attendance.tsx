@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabaseClient';
 import {
   ClipboardList, ChevronRight, CheckCircle2, XCircle, Clock,
   Users, Calendar, BookOpen, Play, RotateCcw, ChevronDown,
-  History, ChevronUp, Filter, QrCode,
+  History, ChevronUp, Filter, QrCode, Search,
 } from 'lucide-react';
 
 // ─── Tipos locales ────────────────────────────────────────────────
@@ -187,6 +187,7 @@ export default function Attendance() {
   const [saving, setSaving]           = useState<string | null>(null);  // student_id que se está guardando
   const [qrOpen, setQrOpen]           = useState(false);
   const [qrResult, setQrResult]       = useState<{ name: string; status: 'success' | 'already' | 'not_found' } | null>(null);
+  const [searchTerm, setSearchTerm]   = useState('');
 
   // ─── Queries ──────────────────────────────────────────────────
   const { data: groups = [] } = useQuery({
@@ -528,6 +529,20 @@ export default function Attendance() {
           </div>
         </div>
 
+        {/* Búsqueda */}
+        {students.length > 0 && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar estudiante..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="input-field pl-9 py-2.5 text-sm"
+            />
+          </div>
+        )}
+
         {/* Lista de estudiantes */}
         {students.length === 0 ? (
           <div className="card p-12 text-center">
@@ -536,7 +551,9 @@ export default function Attendance() {
           </div>
         ) : (
           <div className="space-y-2 pb-8">
-            {students.map((student: any, idx: number) => {
+            {students
+            .filter((s: any) => !searchTerm || s.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || s.student_code.includes(searchTerm))
+            .map((student: any, idx: number) => {
               const status = attendance[student.id] as AttendanceStatus | undefined;
               const isSaving = saving === student.id;
 
