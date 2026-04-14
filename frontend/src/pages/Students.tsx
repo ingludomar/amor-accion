@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
 import StudentIDCard from '../components/StudentIDCard';
 import {
-  studentAPI, campusAPI, guardianAPI, groupAPI, gradeAPI, appSettingsAPI, absenceAPI,
+  studentAPI, campusAPI, guardianAPI, groupAPI, gradeAPI, appSettingsAPI, absenceAPI, whatsappLogAPI,
   Student, Guardian, CreateStudentRequest,
 } from '../lib/supabaseApi';
 import { useGradeScale, DEFAULT_SCALE_MAP } from '../hooks/useGradeScale';
@@ -107,7 +107,15 @@ async function exportBoletinPDF(
 }
 
 // ─── Alerta de inasistencia ──────────────────────────────────────
-function AbsenceAlert({ studentId, groupId }: { studentId: string; groupId?: string }) {
+interface AbsenceAlertProps {
+  studentId: string;
+  groupId?: string;
+  studentName: string;
+  guardians?: Guardian[];
+}
+
+function AbsenceAlert({ studentId, groupId, studentName, guardians = [] }: AbsenceAlertProps) {
+  const queryClient = useQueryClient();
   const { data: threshold = 3 } = useQuery({
     queryKey: ['app-settings', 'absence_threshold'],
     queryFn: async () => {
@@ -122,10 +130,50 @@ function AbsenceAlert({ studentId, groupId }: { studentId: string; groupId?: str
     enabled: !!groupId,
   });
 
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['wa-notifications', studentId],
+    queryFn: () => whatsappLogAPI.getByStudent(studentId),
+  });
+
   if (!analysis) return null;
 
   const isAtRisk = analysis.consecutive >= threshold;
   const isCritical = analysis.consecutive >= 4;
+
+  // Buscar acudiente principal con WhatsApp, o cualquiera con WhatsApp
+  const whatsappGuardian = guardians.find(g => g.is_primary && g.has_whatsapp)
+    || guardians.find(g => g.has_whatsapp);
+  const whatsappPhone = whatsappGuardian?.whatsapp_phone || whatsappGuardian?.phone_mobile;
+
+  const buildMessage = () => {
+    return `Hola ${whatsappGuardian?.first_name}, le informamos desde Amor Acción que ${studentName} lleva ${analysis.consecutive} ausencias consecutivas. ` +
+      `Recuerde que al acumular 4 ausencias seguidas el estudiante pierde su cupo. ` +
+      `Le agradecemos comunicarse con nosotros para conocer la situación. Gracias.`;
+  };
+
+  const handleAvisar = async () => {
+    if (!whatsappPhone || !whatsappGuardian) return;
+    const phone = whatsappPhone.replace(/\D/g, '');
+    const msg = buildMessage();
+
+    // Registrar el envío
+    try {
+      await whatsappLogAPI.log({
+        student_id: studentId,
+        guardian_id: whatsappGuardian.id,
+        guardian_name: whatsappGuardian.first_name + ' ' + (whatsappGuardian.last_name || ''),
+        phone,
+        message: msg,
+        consecutive: analysis.consecutive,
+      });
+      queryClient.invalidateQueries({ queryKey: ['wa-notifications', studentId] });
+    } catch (e) {
+      // No bloquear el envío si falla el log
+    }
+
+    // Abrir WhatsApp
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
 
   return (
     <div className="mt-2 space-y-1.5">
@@ -135,10 +183,21 @@ function AbsenceAlert({ studentId, groupId }: { studentId: string; groupId?: str
           isCritical ? 'bg-red-100 border-red-300' : 'bg-red-50 border-red-200'
         }`}>
           <Bell className={`w-4 h-4 flex-shrink-0 ${isCritical ? 'text-red-600 animate-pulse' : 'text-red-500'}`} />
-          <p className="text-xs text-red-700">
-            <span className="font-bold">{analysis.consecutive} ausencias seguidas</span>
-            {isCritical && <span className="text-red-600 font-bold"> — En riesgo de perder cupo</span>}
-          </p>
+          <div className="flex-1">
+            <p className="text-xs text-red-700">
+              <span className="font-bold">{analysis.consecutive} ausencias seguidas</span>
+              {isCritical && <span className="text-red-600 font-bold"> — En riesgo de perder cupo</span>}
+            </p>
+          </div>
+          {whatsappPhone && (
+            <button
+              onClick={handleAvisar}
+              className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200 px-2 py-1 rounded-lg transition flex-shrink-0"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              Avisar
+            </button>
+          )}
         </div>
       )}
 
@@ -150,6 +209,18 @@ function AbsenceAlert({ studentId, groupId }: { studentId: string; groupId?: str
             <span className="font-bold">{analysis.yearTotal}</span> ausencias de{' '}
             <span className="font-bold">{analysis.yearSessions}</span> sesiones en {new Date().getFullYear()}
           </p>
+        </div>
+      )}
+
+      {/* Historial de notificaciones WhatsApp */}
+      {notifications.length > 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2">
+          <p className="text-xs font-medium text-green-700 mb-1">Notificaciones enviadas:</p>
+          {notifications.map(n => (
+            <p key={n.id} className="text-xs text-green-600">
+              {n.sent_by_name} avisó a {n.guardian_name} — {new Date(n.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </p>
+          ))}
         </div>
       )}
     </div>
@@ -554,7 +625,7 @@ export default function Students() {
                     {activeStudent.group.name}
                   </span>
                 )}
-                <AbsenceAlert studentId={activeStudent.id} groupId={activeStudent.group_id} />
+                <AbsenceAlert studentId={activeStudent.id} groupId={activeStudent.group_id} studentName={activeStudent.full_name} guardians={activeStudent.guardians} />
               </div>
             </div>
 

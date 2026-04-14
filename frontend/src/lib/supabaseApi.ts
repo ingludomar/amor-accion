@@ -1065,11 +1065,11 @@ export const absenceAPI = {
    * Obtiene estudiantes en riesgo (con N+ ausencias consecutivas)
    * para mostrar en el dashboard
    */
-  getAtRisk: async (threshold: number): Promise<{ student_id: string; name: string; code: string; group: string; consecutive: number; yearTotal: number }[]> => {
-    // Obtener todos los estudiantes activos con su grupo
+  getAtRisk: async (threshold: number): Promise<{ student_id: string; name: string; code: string; group: string; consecutive: number; yearTotal: number; whatsapp?: string; guardianName?: string }[]> => {
+    // Obtener todos los estudiantes activos con su grupo y acudientes
     const { data: students } = await supabase
       .from('students')
-      .select('id, full_name, student_code, group_id, group:groups(name)')
+      .select('id, full_name, student_code, group_id, group:groups(name), student_guardians(is_primary, guardian:guardians(first_name, has_whatsapp, whatsapp_phone, phone_mobile))')
       .eq('is_active', true);
 
     if (!students?.length) return [];
@@ -1130,6 +1130,12 @@ export const absenceAPI = {
       }
 
       if (consecutive >= threshold) {
+        // Buscar acudiente con WhatsApp (primero principal, luego cualquiera)
+        const guardianRels = student.student_guardians ?? [];
+        const waGuardian = guardianRels.find((sg: any) => sg.is_primary && sg.guardian?.has_whatsapp)
+          || guardianRels.find((sg: any) => sg.guardian?.has_whatsapp);
+        const waPhone = waGuardian?.guardian?.whatsapp_phone || waGuardian?.guardian?.phone_mobile;
+
         results.push({
           student_id: student.id,
           name: student.full_name,
@@ -1137,6 +1143,8 @@ export const absenceAPI = {
           group: student.group?.name ?? '',
           consecutive,
           yearTotal,
+          whatsapp: waPhone ? waPhone.replace(/\D/g, '') : undefined,
+          guardianName: waGuardian?.guardian?.first_name,
         });
       }
     }
@@ -1168,6 +1176,54 @@ export const appSettingsAPI = {
   },
 };
 
+// ============================================
+// WHATSAPP NOTIFICATIONS LOG API
+// ============================================
+
+export interface WhatsAppNotification {
+  id: string;
+  student_id: string;
+  guardian_id?: string;
+  sent_by?: string;
+  sent_by_name?: string;
+  guardian_name?: string;
+  phone?: string;
+  message?: string;
+  consecutive?: number;
+  created_at: string;
+}
+
+export const whatsappLogAPI = {
+  log: async (params: {
+    student_id: string;
+    guardian_id?: string;
+    guardian_name: string;
+    phone: string;
+    message: string;
+    consecutive: number;
+  }) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user?.id).maybeSingle();
+    const { error } = await supabase.from('whatsapp_notifications').insert({
+      ...params,
+      sent_by: user?.id,
+      sent_by_name: profile?.full_name ?? user?.email,
+    });
+    if (error) throw error;
+  },
+
+  getByStudent: async (studentId: string): Promise<WhatsAppNotification[]> => {
+    const { data, error } = await supabase
+      .from('whatsapp_notifications')
+      .select('*')
+      .eq('student_id', studentId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    if (error) throw error;
+    return data as WhatsAppNotification[];
+  },
+};
+
 export default {
   campusAPI,
   studentAPI,
@@ -1182,5 +1238,6 @@ export default {
   gradeScaleAPI,
   suggestionAPI,
   appSettingsAPI,
+  whatsappLogAPI,
 };
 

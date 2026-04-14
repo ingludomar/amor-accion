@@ -1,13 +1,14 @@
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabaseClient';
-import { appSettingsAPI, absenceAPI } from '../lib/supabaseApi';
+import { appSettingsAPI, absenceAPI, whatsappLogAPI } from '../lib/supabaseApi';
+// whatsappLogAPI used in handleAvisar inside JSX
 import {
   Building2, Users, ClipboardCheck, TrendingUp,
   Calendar, AlertTriangle, ChevronRight, CheckCircle2,
-  XCircle, Clock, Bell,
+  XCircle, Clock, Bell, MessageCircle, Check,
 } from 'lucide-react';
 
 // ── helpers ──────────────────────────────────────────────────────
@@ -18,6 +19,7 @@ const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
 export default function Dashboard() {
   const { user } = useAuthStore();
   const navigate  = useNavigate();
+  const queryClient = useQueryClient();
 
   // Total estudiantes activos
   const { data: totalStudents = 0 } = useQuery({
@@ -95,6 +97,31 @@ export default function Dashboard() {
     queryKey: ['dash-at-risk', threshold],
     queryFn: () => absenceAPI.getAtRisk(threshold),
     enabled: threshold > 0,
+  });
+
+  // Notificaciones WhatsApp recientes (para mostrar indicador)
+  const { data: recentNotifications = [] } = useQuery({
+    queryKey: ['wa-notifications-all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('whatsapp_notifications')
+        .select('student_id, sent_by_name, created_at')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // Mapa: student_id → última notificación
+  const notifMap: Record<string, { sentBy: string; date: string }> = {};
+  recentNotifications.forEach((n: any) => {
+    if (!notifMap[n.student_id]) {
+      notifMap[n.student_id] = {
+        sentBy: n.sent_by_name,
+        date: new Date(n.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }),
+      };
+    }
   });
 
   const stats = [
@@ -202,25 +229,66 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="space-y-2">
-                {atRiskStudents.map((s) => (
-                  <div key={s.code} className="flex items-center gap-3 py-2 bg-red-50/50 -mx-2 px-2 rounded-lg border-b border-gray-50 last:border-0">
-                    <span className="w-6 h-6 rounded-full flex items-center justify-center bg-red-100 text-red-600 flex-shrink-0">
-                      <Bell className="w-3 h-3" />
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">{s.name}</p>
-                      <p className="text-xs text-gray-400">{s.group} · {s.code}</p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <span className="text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full block">
-                        {s.consecutive} seguidas
+                {atRiskStudents.map((s) => {
+                  const notif = notifMap[s.student_id];
+                  const msg = s.whatsapp && s.guardianName
+                    ? `Hola ${s.guardianName}, le informamos desde Amor Acción que ${s.name} lleva ${s.consecutive} ausencias consecutivas. ` +
+                      `Recuerde que al acumular 4 ausencias seguidas el estudiante pierde su cupo. ` +
+                      `Le agradecemos comunicarse con nosotros para conocer la situación. Gracias.`
+                    : null;
+
+                  const handleAvisar = async () => {
+                    if (!s.whatsapp || !s.guardianName || !msg) return;
+                    try {
+                      await whatsappLogAPI.log({
+                        student_id: s.student_id,
+                        guardian_name: s.guardianName,
+                        phone: s.whatsapp,
+                        message: msg,
+                        consecutive: s.consecutive,
+                      });
+                      queryClient.invalidateQueries({ queryKey: ['wa-notifications-all'] });
+                    } catch (e) { /* no bloquear */ }
+                    window.open(`https://wa.me/${s.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
+                  };
+
+                  return (
+                    <div key={s.code} className="flex items-center gap-3 py-2 bg-red-50/50 -mx-2 px-2 rounded-lg border-b border-gray-50 last:border-0">
+                      <span className="w-6 h-6 rounded-full flex items-center justify-center bg-red-100 text-red-600 flex-shrink-0">
+                        <Bell className="w-3 h-3" />
                       </span>
-                      <span className="text-xs text-gray-400 mt-0.5 block">
-                        {s.yearTotal} en el año
-                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">{s.name}</p>
+                        <p className="text-xs text-gray-400">{s.group} · {s.code}</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {msg && (
+                          notif ? (
+                            <span
+                              title={`${notif.sentBy} avisó el ${notif.date}`}
+                              className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded-lg cursor-default"
+                            >
+                              <Check className="w-3 h-3" /> Notificado
+                            </span>
+                          ) : (
+                            <button onClick={handleAvisar}
+                              className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200 px-2 py-1 rounded-lg transition">
+                              <MessageCircle className="w-3 h-3" /> Avisar
+                            </button>
+                          )
+                        )}
+                        <div className="text-right">
+                          <span className="text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full block">
+                            {s.consecutive} seguidas
+                          </span>
+                          <span className="text-xs text-gray-400 mt-0.5 block">
+                            {s.yearTotal} en el año
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
