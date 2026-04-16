@@ -22,6 +22,7 @@
 | 11 | Buzón de sugerencias | ✅ Completo | dev-feature-buzon-sugerencias | Mar 2026 |
 | 12 | Login con username | ✅ Completo | dev-feature-login-username | Abr 2026 |
 | 13 | Boletín de calificaciones PDF | ✅ Completo | dev-feature-boletin-pdf | Abr 2026 |
+| 14 | WhatsApp avisar acudientes + registro | ✅ Completo | dev-feature-whatsapp-acudiente | Abr 2026 |
 
 ---
 
