@@ -6,6 +6,8 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../components/Layout';
 import { campusAPI, Campus } from '../lib/supabaseApi';
+import { uploadCampusLogo } from '../lib/storageApi';
+import ImageUpload from '../components/ImageUpload';
 import { Building2, Plus, Pencil, Trash2, X, MapPin, Phone, Mail, Home, ChevronRight } from 'lucide-react';
 
 export default function Campuses() {
@@ -389,20 +391,36 @@ export default function Campuses() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  URL del Logo de la Sede
+                  Logo de la Sede
                 </label>
-                <input
-                  type="url"
-                  value={formData.logo_url || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, logo_url: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="https://ejemplo.com/logo.png"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Pega aquí la URL de la imagen del logo (Imgur, Google Drive, etc.
-                </p>
+                {editingCampus ? (
+                  <div className="flex items-start gap-4">
+                    <div className="w-24">
+                      <ImageUpload
+                        currentImage={formData.logo_url}
+                        aspectRatio="square"
+                        maxSizeMB={2}
+                        onUpload={async (file) => {
+                          const url = await uploadCampusLogo(editingCampus.id, file);
+                          setFormData({ ...formData, logo_url: url });
+                          // Guardar inmediatamente en BD
+                          await campusAPI.update(editingCampus.id, { logo_url: url });
+                          queryClient.invalidateQueries({ queryKey: ['campuses'] });
+                        }}
+                        onClear={() => setFormData({ ...formData, logo_url: '' })}
+                      />
+                    </div>
+                    <div className="flex-1 text-xs text-gray-500 pt-1">
+                      Formatos: PNG, JPG, SVG. Máximo 2MB.
+                      <br />
+                      Se usará en los carnets de los estudiantes de esta sede.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
+                    Primero guarda la sede. Luego podrás subir su logo desde "Editar".
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2">

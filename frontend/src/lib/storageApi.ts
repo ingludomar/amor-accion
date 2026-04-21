@@ -64,6 +64,21 @@ export const uploadLogo = async (file: File) => {
   return storageAPI.getPublicUrl('logos', fileName);
 };
 
+// Subir logo de una sede
+export const uploadCampusLogo = async (campusId: string, file: File) => {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `campus-${campusId}.${fileExt}`;
+
+  const { error } = await storageAPI.upload('logos', fileName, file, {
+    upsert: true,
+  });
+
+  if (error) throw error;
+
+  // Cache-busting: usar timestamp para que el navegador cargue la nueva versión
+  return storageAPI.getPublicUrl('logos', fileName) + `?t=${Date.now()}`;
+};
+
 // Subir foto de estudiante
 export const uploadStudentPhoto = async (studentId: string, file: File) => {
   const fileExt = file.name.split('.').pop();
