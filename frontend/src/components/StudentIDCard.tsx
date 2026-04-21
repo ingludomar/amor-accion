@@ -127,10 +127,10 @@ export default function StudentIDCard({ student, campus, onClose }: StudentIDCar
             className="relative bg-white shadow-2xl rounded-xl overflow-hidden"
             style={{ width: '856px', height: '540px', border: '2px solid #e5e7eb' }}
           >
-            {/* Watermark: Logo ReeAmor de fondo */}
-            {reeamorLogoUrl && (
+            {/* Watermark: Logo de la sede (fallback a ReeAmor si la sede no tiene) */}
+            {(campus.logo_url || reeamorLogoUrl) && (
               <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
-                <img src={reeamorLogoUrl} alt="" className="w-96 h-96 object-contain" crossOrigin="anonymous" />
+                <img src={campus.logo_url || reeamorLogoUrl} alt="" className="w-96 h-96 object-contain" crossOrigin="anonymous" />
               </div>
             )}
 
