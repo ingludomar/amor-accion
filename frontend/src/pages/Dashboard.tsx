@@ -3,12 +3,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabaseClient';
-import { appSettingsAPI, absenceAPI, whatsappLogAPI } from '../lib/supabaseApi';
+import { appSettingsAPI, absenceAPI, whatsappLogAPI, calendarAPI, topicAPI } from '../lib/supabaseApi';
 // whatsappLogAPI used in handleAvisar inside JSX
 import {
   Building2, Users, ClipboardCheck, TrendingUp,
   Calendar, AlertTriangle, ChevronRight, CheckCircle2,
-  XCircle, Clock, Bell, MessageCircle, Check,
+  XCircle, Clock, Bell, MessageCircle, Check, BookOpen, PartyPopper,
 } from 'lucide-react';
 
 // ── helpers ──────────────────────────────────────────────────────
@@ -113,6 +113,18 @@ export default function Dashboard() {
     },
   });
 
+  // Eventos y temas de hoy
+  const { data: todayEvents = [] } = useQuery({
+    queryKey: ['calendar-today', today],
+    queryFn: () => calendarAPI.getByDate(today),
+  });
+
+  const { data: todayTopicsResp } = useQuery({
+    queryKey: ['topics-today', today],
+    queryFn: () => topicAPI.getAll(),
+  });
+  const todayTopics = (todayTopicsResp?.data ?? []).filter((t: any) => t.planned_date === today);
+
   // Mapa: student_id → última notificación
   const notifMap: Record<string, { sentBy: string; date: string }> = {};
   recentNotifications.forEach((n: any) => {
@@ -172,6 +184,50 @@ export default function Dashboard() {
             );
           })}
         </div>
+
+        {/* Widget: Hoy */}
+        {(todayTopics.length > 0 || todayEvents.length > 0) && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-blue-600" />
+                Hoy
+              </h2>
+              <button onClick={() => navigate('/calendar')} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                Ver calendario <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+            <div className="space-y-2">
+              {todayTopics.map((t: any) => (
+                <div key={'t-' + t.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-blue-50/50 border border-blue-100">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <BookOpen className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{t.title}</p>
+                    <p className="text-xs text-gray-500">Clase · {t.group?.name}</p>
+                  </div>
+                  {t.is_done && <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded-full">Realizado</span>}
+                </div>
+              ))}
+              {todayEvents.map(e => (
+                <div key={'e-' + e.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-purple-50/50 border border-purple-100">
+                  <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                    <PartyPopper className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{e.title}</p>
+                    <p className="text-xs text-gray-500 capitalize">
+                      {e.event_type}
+                      {e.event_time && ` · ${e.event_time.slice(0, 5)}`}
+                      {e.campus && ` · ${e.campus.name}`}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 

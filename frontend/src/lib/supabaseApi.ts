@@ -1224,6 +1224,76 @@ export const whatsappLogAPI = {
   },
 };
 
+// ============================================
+// CALENDAR EVENTS API
+// ============================================
+
+export type EventType = 'jornada' | 'paseo' | 'reunion' | 'festivo' | 'otro';
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  event_date: string;      // YYYY-MM-DD
+  event_time?: string;     // HH:MM
+  event_type: EventType;
+  campus_id?: string;
+  campus?: { id: string; name: string };
+  created_by?: string;
+  created_at: string;
+}
+
+export const calendarAPI = {
+  getByRange: async (dateFrom: string, dateTo: string): Promise<CalendarEvent[]> => {
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .select('*, campus:campuses(id, name)')
+      .gte('event_date', dateFrom)
+      .lte('event_date', dateTo)
+      .order('event_date')
+      .order('event_time');
+    if (error) throw error;
+    return data as CalendarEvent[];
+  },
+
+  getByDate: async (date: string): Promise<CalendarEvent[]> => {
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .select('*, campus:campuses(id, name)')
+      .eq('event_date', date)
+      .order('event_time');
+    if (error) throw error;
+    return data as CalendarEvent[];
+  },
+
+  create: async (event: Omit<CalendarEvent, 'id' | 'created_at' | 'created_by' | 'campus'>) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .insert({ ...event, created_by: user?.id })
+      .select('*, campus:campuses(id, name)')
+      .single();
+    if (error) throw error;
+    return data as CalendarEvent;
+  },
+
+  update: async (id: string, event: Partial<Omit<CalendarEvent, 'id' | 'created_at' | 'created_by' | 'campus'>>) => {
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .update(event)
+      .eq('id', id)
+      .select('*, campus:campuses(id, name)')
+      .single();
+    if (error) throw error;
+    return data as CalendarEvent;
+  },
+
+  delete: async (id: string) => {
+    const { error } = await supabase.from('calendar_events').delete().eq('id', id);
+    if (error) throw error;
+  },
+};
+
 export default {
   campusAPI,
   studentAPI,
@@ -1239,5 +1309,6 @@ export default {
   suggestionAPI,
   appSettingsAPI,
   whatsappLogAPI,
+  calendarAPI,
 };
 

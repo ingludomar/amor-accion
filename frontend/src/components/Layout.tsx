@@ -8,7 +8,7 @@ import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import {
   LogOut, School, Building2, Users, ClipboardList, BarChart3,
   BookOpen, Menu, X, UserCircle, Settings, UserCheck, ShieldCheck, MessageSquare,
-  Download,
+  Download, Calendar,
 } from 'lucide-react';
 
 interface LayoutProps { children: ReactNode; }
@@ -34,6 +34,7 @@ export default function Layout({ children }: LayoutProps) {
   const settings   = usePermission('settings');
   const roles       = usePermission('roles');
   const suggestions = usePermission('suggestions');
+  const calendar    = usePermission('calendar');
 
   useEffect(() => { setLogoUrl(getLogoUrl()); }, []);
 
@@ -45,6 +46,7 @@ export default function Layout({ children }: LayoutProps) {
     { name: 'Grupos',        href: '/groups',     icon: Users,        show: groups.canView },
     { name: 'Temas',         href: '/topics',     icon: BookOpen,     show: topics.canView },
     { name: 'Asistencia',    href: '/attendance', icon: ClipboardList,show: attendance.canView },
+    { name: 'Calendario',    href: '/calendar',   icon: Calendar,     show: calendar.canView },
     { name: 'Reportes',      href: '/reports',    icon: BarChart3,    show: reports.canView },
     { name: 'Sedes',         href: '/campuses',   icon: Building2,    show: campuses.canView },
     { name: 'Usuarios',      href: '/users',      icon: UserCheck,    show: users.canView },

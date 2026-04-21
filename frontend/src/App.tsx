@@ -17,6 +17,7 @@ import Attendance from './pages/Attendance';
 import Settings from './pages/Settings';
 import Roles from './pages/Roles';
 import Suggestions from './pages/Suggestions';
+import CalendarPage from './pages/Calendar';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Create a client
@@ -130,6 +131,15 @@ function App() {
             element={
               <ProtectedRoute module="suggestions">
                 <Suggestions />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/calendar"
+            element={
+              <ProtectedRoute module="calendar">
+                <CalendarPage />
               </ProtectedRoute>
             }
           />
