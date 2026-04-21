@@ -52,16 +52,18 @@ export const storageAPI = {
 
 // Subir logo de la organización
 export const uploadLogo = async (file: File) => {
-  const fileExt = file.name.split('.').pop();
-  const fileName = `logo.${fileExt}`;
+  // Siempre guardar como logo.png (el nombre es solo una clave,
+  // Supabase respeta el content-type real del archivo)
+  const fileName = 'logo.png';
 
-  const { data, error } = await storageAPI.upload('logos', fileName, file, {
+  const { error } = await storageAPI.upload('logos', fileName, file, {
     upsert: true,
   });
 
   if (error) throw error;
 
-  return storageAPI.getPublicUrl('logos', fileName);
+  // Cache-busting para forzar recarga
+  return storageAPI.getPublicUrl('logos', fileName) + `?t=${Date.now()}`;
 };
 
 // Subir logo de una sede
@@ -97,9 +99,12 @@ export const uploadStudentPhoto = async (studentId: string, file: File) => {
   return storageAPI.getPublicUrl('student-photos', path);
 };
 
-// Obtener URL del logo
+// Obtener URL del logo (con cache-busting por hora para refrescar si cambió)
 export const getLogoUrl = () => {
-  return storageAPI.getPublicUrl('logos', 'logo.png');
+  const url = storageAPI.getPublicUrl('logos', 'logo.png');
+  // Agregar timestamp redondeado cada hora → permite cache del navegador pero refresca cuando cambia
+  const hourKey = Math.floor(Date.now() / 3600000);
+  return `${url}?t=${hourKey}`;
 };
 
 // Obtener URL de foto de estudiante
