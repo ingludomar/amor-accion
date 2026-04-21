@@ -24,6 +24,7 @@
 | 13 | Boletín de calificaciones PDF | ✅ Completo | dev-feature-boletin-pdf | Abr 2026 |
 | 14 | WhatsApp avisar acudientes + registro | ✅ Completo | dev-feature-whatsapp-acudiente | Abr 2026 |
 | 15 | Calendario de actividades y clases | ✅ Completo | dev-feature-calendario | Abr 2026 |
+| 16 | Subir logo de sede con ImageUpload | ✅ Completo | dev-feature-logo-sedes | Abr 2026 |
 
 ---
 
