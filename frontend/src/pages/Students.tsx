@@ -494,7 +494,8 @@ export default function Students() {
     addGuardian.mutate(guardianForm);
   };
 
-  const campus = campuses[0]; // Siape
+  // Sede del estudiante activo (para el carnet); fallback a la primera sede disponible
+  const campus = campuses.find((c: any) => c.id === activeStudent?.campus_id) || campuses[0];
 
   // ─── Render ───────────────────────────────────────────────────
   return (
