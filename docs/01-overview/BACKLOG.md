@@ -23,6 +23,7 @@
 | 12 | Login con username | ✅ Completo | dev-feature-login-username | Abr 2026 |
 | 13 | Boletín de calificaciones PDF | ✅ Completo | dev-feature-boletin-pdf | Abr 2026 |
 | 14 | WhatsApp avisar acudientes + registro | ✅ Completo | dev-feature-whatsapp-acudiente | Abr 2026 |
+| 15 | Calendario de actividades y clases | ✅ Completo | dev-feature-calendario | Abr 2026 |
 
 ---
 
