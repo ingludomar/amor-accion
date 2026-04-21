@@ -2,10 +2,13 @@
  * Student ID Card — responsive preview + share/download
  */
 import { useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { X, Download, Share2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 import type { Student, Campus } from '../lib/api';
+import { getLogoUrl } from '../lib/storageApi';
+import { appSettingsAPI } from '../lib/supabaseApi';
 
 function calcAge(birthDate?: string): number | null {
   if (!birthDate) return null;
@@ -26,6 +29,12 @@ interface StudentIDCardProps {
 export default function StudentIDCard({ student, campus, onClose }: StudentIDCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [sharing, setSharing] = useState(false);
+
+  const reeamorLogoUrl = getLogoUrl();
+  const { data: programName = 'Amor Acción' } = useQuery({
+    queryKey: ['app-settings', 'program_name'],
+    queryFn: async () => (await appSettingsAPI.get('program_name')) ?? 'Amor Acción',
+  });
 
   // Generate canvas from card
   const generateCanvas = async () => {
@@ -118,22 +127,37 @@ export default function StudentIDCard({ student, campus, onClose }: StudentIDCar
             className="relative bg-white shadow-2xl rounded-xl overflow-hidden"
             style={{ width: '856px', height: '540px', border: '2px solid #e5e7eb' }}
           >
-            {/* Logo watermark */}
-            {campus.logo_url && (
+            {/* Watermark: Logo ReeAmor de fondo */}
+            {reeamorLogoUrl && (
               <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
-                <img src={campus.logo_url} alt="" className="w-96 h-96 object-contain" />
+                <img src={reeamorLogoUrl} alt="" className="w-96 h-96 object-contain" crossOrigin="anonymous" />
               </div>
             )}
 
             <div className="relative h-full p-8 flex flex-col">
-              {/* Card header */}
-              <div className="flex items-center justify-between mb-6">
-                {campus.logo_url && (
-                  <img src={campus.logo_url} alt={campus.name} className="h-16 object-contain" />
-                )}
-                <div className="text-right">
-                  <h3 className="text-xl font-bold text-gray-900">{campus.name}</h3>
-                  <p className="text-sm text-gray-600">{campus.city || ''}</p>
+              {/* Card header: ReeAmor (izq) + Sede (der) */}
+              <div className="flex items-center justify-between mb-3">
+                {/* Izquierda: Logo ReeAmor + nombre del programa */}
+                <div className="flex items-center gap-3">
+                  {reeamorLogoUrl && (
+                    <img src={reeamorLogoUrl} alt="ReeAmor" className="h-16 object-contain" crossOrigin="anonymous" />
+                  )}
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 leading-tight">ReeAmor</h3>
+                    <p className="text-xs text-gray-500 leading-tight">Reencuentro por Amor</p>
+                    <p className="text-xs text-pink-600 font-semibold mt-0.5">Programa: {programName}</p>
+                  </div>
+                </div>
+
+                {/* Derecha: Logo sede + nombre */}
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <h3 className="text-base font-semibold text-gray-800 leading-tight">{campus.name}</h3>
+                    <p className="text-xs text-gray-500">{campus.city || ''}</p>
+                  </div>
+                  {campus.logo_url && (
+                    <img src={campus.logo_url} alt={campus.name} className="h-14 object-contain" crossOrigin="anonymous" />
+                  )}
                 </div>
               </div>
 

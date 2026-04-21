@@ -202,9 +202,15 @@ export default function Campuses() {
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="bg-indigo-100 p-2 rounded-lg">
-                    <Building2 className="w-6 h-6 text-indigo-600" />
-                  </div>
+                  {campus.logo_url ? (
+                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-white border border-gray-200 flex items-center justify-center flex-shrink-0">
+                      <img src={campus.logo_url} alt={campus.name} className="w-full h-full object-contain" />
+                    </div>
+                  ) : (
+                    <div className="bg-indigo-100 p-2 rounded-lg">
+                      <Building2 className="w-6 h-6 text-indigo-600" />
+                    </div>
+                  )}
                   <div>
                     <h3 className="font-semibold text-gray-900">{campus.name}</h3>
                     <p className="text-sm text-gray-500">{campus.code}</p>

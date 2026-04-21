@@ -6,9 +6,88 @@ import { supabase } from '../lib/supabaseClient';
 import { gradeScaleAPI, appSettingsAPI } from '../lib/supabaseApi';
 import { useGradeScale, COLOR_CLASSES } from '../hooks/useGradeScale';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Settings as SettingsIcon, Upload, CheckCircle, Lock, Eye, EyeOff, AlertCircle, Star, Bell } from 'lucide-react';
+import { Settings as SettingsIcon, Upload, CheckCircle, Lock, Eye, EyeOff, AlertCircle, Star, Bell, Heart } from 'lucide-react';
 
 const COLORS = ['red', 'orange', 'yellow', 'blue', 'green', 'purple', 'gray'];
+
+function ProgramNameSection() {
+  const queryClient = useQueryClient();
+  const { data: currentName } = useQuery({
+    queryKey: ['app-settings', 'program_name'],
+    queryFn: () => appSettingsAPI.get('program_name'),
+  });
+  const [value, setValue] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const current = currentName ?? 'Amor Acción';
+
+  async function handleSave() {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    setSaving(true);
+    setSuccess(false);
+    try {
+      await appSettingsAPI.set('program_name', trimmed);
+      queryClient.invalidateQueries({ queryKey: ['app-settings', 'program_name'] });
+      setValue('');
+      setSuccess(true);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-card border border-gray-100 p-8">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 bg-pink-100 rounded-lg">
+          <Heart className="w-6 h-6 text-pink-600" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Programa activo</h2>
+          <p className="text-sm text-gray-500">
+            Nombre del programa que aparecerá en los carnets y documentos
+          </p>
+        </div>
+      </div>
+
+      {success && (
+        <div className="mb-5 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
+          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+          <p className="text-green-800 text-sm">Nombre del programa actualizado.</p>
+        </div>
+      )}
+
+      <div className="max-w-sm space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Nombre del programa
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              className="input-field flex-1"
+              placeholder={current}
+              value={value}
+              onChange={e => { setValue(e.target.value); setSuccess(false); }}
+            />
+          </div>
+          <p className="text-xs text-gray-400 mt-2">
+            Actual: <span className="font-bold text-pink-600">{current}</span>
+            <br />
+            Ejemplos: "Amor Acción", "Salud ReeAmor", "Educación ReeAmor"
+          </p>
+        </div>
+
+        {value && value.trim() !== current && (
+          <button onClick={handleSave} disabled={saving} className="btn-primary">
+            {saving ? 'Guardando…' : 'Guardar'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function AbsenceThresholdSection() {
   const queryClient = useQueryClient();
@@ -203,9 +282,9 @@ export default function Settings() {
               <Upload className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Logo de la Organización</h2>
+              <h2 className="text-xl font-bold text-gray-900">Logo de ReeAmor</h2>
               <p className="text-sm text-gray-500">
-                Sube el logo de Amor Acción para mostrarlo en el sistema
+                Sube el logo de la organización (ReeAmor — Reencuentro por Amor)
               </p>
             </div>
           </div>
@@ -419,6 +498,9 @@ export default function Settings() {
             </button>
           )}
         </div>
+
+        {/* Programa activo */}
+        <ProgramNameSection />
 
         {/* Umbral de inasistencia */}
         <AbsenceThresholdSection />
