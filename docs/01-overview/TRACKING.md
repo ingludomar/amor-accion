@@ -61,6 +61,7 @@
 | 18 | WhatsApp avisar acudientes + registro | dev-feature-whatsapp-acudiente | Abr 2026 |
 | 19 | Calendario de actividades y clases | dev-feature-calendario | Abr 2026 |
 | 20 | Subir logo de sede con ImageUpload | dev-feature-logo-sedes | Abr 2026 |
+| 21 | Carnet con logos ReeAmor + sede y programa activo | dev-feature-carnet-dual-logo | Abr 2026 |
 
 ---
 
