@@ -26,6 +26,7 @@
 | 15 | Calendario de actividades y clases | ✅ Completo | dev-feature-calendario | Abr 2026 |
 | 16 | Subir logo de sede con ImageUpload | ✅ Completo | dev-feature-logo-sedes | Abr 2026 |
 | 17 | Carnet con logos ReeAmor + sede y programa activo | ✅ Completo | dev-feature-carnet-dual-logo | Abr 2026 |
+| 18 | Datos académicos + estadísticas niños/niñas | ✅ Completo | dev-feature-datos-estudio | Abr 2026 |
 
 ---
 
