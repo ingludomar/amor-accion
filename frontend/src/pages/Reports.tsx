@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Layout from '../components/Layout';
+import GenderStatsWidget from '../components/GenderStatsWidget';
 import { reportAPI, groupAPI, studentAPI } from '../lib/supabaseApi';
 import { BarChart3, Calendar, Users, User, TrendingUp, FileDown } from 'lucide-react';
 import jsPDF from 'jspdf';
@@ -200,6 +201,9 @@ export default function Reports() {
           </h1>
           <p className="text-blue-100 text-sm">Consulta la asistencia por rango de fechas</p>
         </div>
+
+        {/* Estadísticas de niños y niñas */}
+        <GenderStatsWidget title="Niños y niñas por sede y grupo" />
 
         {/* Filtros */}
         <div className="card p-5 space-y-4">

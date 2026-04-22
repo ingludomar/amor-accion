@@ -302,6 +302,14 @@ const GROUP_COLORS: Record<string, string> = {
   'Pre-Juventud': 'bg-purple-100 text-purple-700',
 };
 
+const GRADE_LEVELS = [
+  'Preescolar', 'Transición',
+  '1°', '2°', '3°', '4°', '5°',
+  '6°', '7°', '8°', '9°',
+  '10°', '11°',
+  'No estudia',
+];
+
 // ─── Tipos locales ────────────────────────────────────────────────
 type View = 'list' | 'detail' | 'form' | 'guardian-form' | 'id-card';
 
@@ -322,6 +330,7 @@ const emptyStudentForm = (): Partial<CreateStudentRequest> => ({
   first_name: '', last_name: '', document_type: '', document_number: '',
   birth_date: '', gender: '', blood_type: '', allergies: '',
   group_id: '', campus_id: '', photo_url: '', is_active: true,
+  school_name: '', grade_level: '',
 });
 
 // ─── Componente principal ─────────────────────────────────────────
@@ -468,6 +477,7 @@ export default function Students() {
       blood_type: student.blood_type || '', allergies: student.allergies || '',
       group_id: student.group_id || '', campus_id: student.campus_id,
       photo_url: student.photo_url || '', is_active: student.is_active,
+      school_name: student.school_name || '', grade_level: student.grade_level || '',
     });
     setView('form');
   };
@@ -654,6 +664,12 @@ export default function Students() {
                 <div className="col-span-2">
                   <InfoItem label="Alergias" value={activeStudent.allergies} />
                 </div>
+              )}
+              {activeStudent.school_name && (
+                <InfoItem label="Colegio" value={activeStudent.school_name} />
+              )}
+              {activeStudent.grade_level && (
+                <InfoItem label="Grado" value={activeStudent.grade_level} />
               )}
             </div>
 
@@ -877,6 +893,35 @@ export default function Students() {
               <div>
                 <label className="label">Alergias / condiciones médicas</label>
                 <textarea value={studentForm.allergies} onChange={e => setStudentForm(f => ({ ...f, allergies: e.target.value }))} className="input-field" rows={2} placeholder="Ninguna" />
+              </div>
+            </div>
+
+            <div className="card p-5 space-y-4">
+              <h3 className="font-semibold text-gray-700 text-sm flex items-center gap-2">
+                <GraduationCap className="w-4 h-4 text-blue-500" /> DATOS ACADÉMICOS
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Colegio</label>
+                  <input
+                    type="text"
+                    value={studentForm.school_name || ''}
+                    onChange={e => setStudentForm(f => ({ ...f, school_name: e.target.value }))}
+                    className="input-field"
+                    placeholder="Nombre del colegio"
+                  />
+                </div>
+                <div>
+                  <label className="label">Grado</label>
+                  <select
+                    value={studentForm.grade_level || ''}
+                    onChange={e => setStudentForm(f => ({ ...f, grade_level: e.target.value }))}
+                    className="input-field"
+                  >
+                    <option value="">Seleccionar</option>
+                    {GRADE_LEVELS.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
 

@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import Layout from '../components/Layout';
+import GenderStatsWidget from '../components/GenderStatsWidget';
 import { supabase } from '../lib/supabaseClient';
 import { appSettingsAPI, absenceAPI, whatsappLogAPI, calendarAPI, topicAPI } from '../lib/supabaseApi';
 // whatsappLogAPI used in handleAvisar inside JSX
@@ -184,6 +185,9 @@ export default function Dashboard() {
             );
           })}
         </div>
+
+        {/* Widget: Estadísticas de niños y niñas */}
+        <GenderStatsWidget title="Niños y niñas" />
 
         {/* Widget: Hoy */}
         {(todayTopics.length > 0 || todayEvents.length > 0) && (

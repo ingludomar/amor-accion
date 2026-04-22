@@ -38,6 +38,8 @@ export interface Student {
   phone?: string;
   address?: string;
   photo_url?: string;
+  school_name?: string;
+  grade_level?: string;
   is_active: boolean;
   created_at: string;
   guardians?: Guardian[];
@@ -1221,6 +1223,55 @@ export const whatsappLogAPI = {
       .limit(10);
     if (error) throw error;
     return data as WhatsAppNotification[];
+  },
+};
+
+// ============================================
+// GENDER STATS API
+// ============================================
+
+export interface GenderStats {
+  label: string;
+  male: number;
+  female: number;
+  total: number;
+}
+
+export const genderStatsAPI = {
+  byCampus: async (): Promise<GenderStats[]> => {
+    const { data, error } = await supabase
+      .from('students')
+      .select('gender, campus:campuses(id, name)')
+      .eq('is_active', true);
+    if (error) throw error;
+
+    const map: Record<string, GenderStats> = {};
+    (data ?? []).forEach((s: any) => {
+      const label = s.campus?.name ?? 'Sin sede';
+      if (!map[label]) map[label] = { label, male: 0, female: 0, total: 0 };
+      if (s.gender === 'male') map[label].male++;
+      else if (s.gender === 'female') map[label].female++;
+      map[label].total++;
+    });
+    return Object.values(map).sort((a, b) => b.total - a.total);
+  },
+
+  byGroup: async (): Promise<GenderStats[]> => {
+    const { data, error } = await supabase
+      .from('students')
+      .select('gender, group:groups(id, name)')
+      .eq('is_active', true);
+    if (error) throw error;
+
+    const map: Record<string, GenderStats> = {};
+    (data ?? []).forEach((s: any) => {
+      const label = s.group?.name ?? 'Sin grupo';
+      if (!map[label]) map[label] = { label, male: 0, female: 0, total: 0 };
+      if (s.gender === 'male') map[label].male++;
+      else if (s.gender === 'female') map[label].female++;
+      map[label].total++;
+    });
+    return Object.values(map).sort((a, b) => b.total - a.total);
   },
 };
 
