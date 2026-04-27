@@ -662,6 +662,40 @@ export const groupAPI = {
     return { data: data || [], error: null };
   },
 
+  create: async (group: { name: string; description?: string }) => {
+    const { data, error } = await supabase
+      .from('groups')
+      .insert({ ...group, is_active: true })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as Group;
+  },
+
+  update: async (id: string, group: { name?: string; description?: string }) => {
+    const { data, error } = await supabase
+      .from('groups')
+      .update(group)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as Group;
+  },
+
+  delete: async (id: string) => {
+    // Verificar si tiene estudiantes
+    const { count } = await supabase
+      .from('students')
+      .select('*', { count: 'exact', head: true })
+      .eq('group_id', id);
+    if (count && count > 0) {
+      throw new Error(`No se puede eliminar: el grupo tiene ${count} estudiante(s) asignado(s).`);
+    }
+    const { error } = await supabase.from('groups').delete().eq('id', id);
+    if (error) throw error;
+  },
+
   addTeacher: async (groupId: string, teacherId: string) => {
     const { data, error } = await supabase
       .from('group_teachers')
