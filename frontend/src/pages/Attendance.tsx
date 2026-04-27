@@ -222,6 +222,7 @@ export default function Attendance() {
         .select('*, group:groups(id, name), topic:topics(id, title)')
         .eq('group_id', setup.group_id)
         .eq('session_date', setup.session_date)
+        .limit(1)
         .maybeSingle();
       return data as ClassSession | null;
     },
@@ -232,13 +233,29 @@ export default function Attendance() {
   const createSession = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      const { data } = await sessionAPI.create({
-        group_id: setup.group_id,
-        topic_id: setup.topic_id || undefined,
-        teacher_id: user?.id,
-        session_date: setup.session_date,
-      });
-      return data;
+      try {
+        const { data } = await sessionAPI.create({
+          group_id: setup.group_id,
+          topic_id: setup.topic_id || undefined,
+          teacher_id: user?.id,
+          session_date: setup.session_date,
+        });
+        return data;
+      } catch (e: any) {
+        // Si otro profesor ya creó la sesión al mismo tiempo (UNIQUE violation),
+        // cargamos la sesión existente en vez de fallar
+        const isDuplicate = e?.code === '23505' || /duplicate|unique/i.test(e?.message ?? '');
+        if (!isDuplicate) throw e;
+
+        const { data: existing } = await supabase
+          .from('class_sessions')
+          .select('*, group:groups(id, name), topic:topics(id, title)')
+          .eq('group_id', setup.group_id)
+          .eq('session_date', setup.session_date)
+          .limit(1)
+          .single();
+        return existing as ClassSession;
+      }
     },
     onSuccess: async (session) => {
       await loadSession(session);
