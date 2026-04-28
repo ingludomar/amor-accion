@@ -1310,6 +1310,232 @@ export const genderStatsAPI = {
 };
 
 // ============================================
+// DOCTRINE API
+// ============================================
+
+export const DAY_NAMES = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+export interface DoctrineCourse {
+  id: string;
+  name: string;
+  description?: string;
+  day_of_week: number; // 1=Lun..7=Dom
+  start_time: string;  // HH:MM:SS
+  end_time: string;
+  prerequisite_id?: string;
+  prerequisite?: { id: string; name: string };
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface DoctrineLesson {
+  id: string;
+  course_id: string;
+  course?: { id: string; name: string; day_of_week: number };
+  sequence_number: number;
+  title: string;
+  scripture_ref?: string;
+  description?: string;
+  planned_date: string;
+  teacher_id?: string;
+  teacher?: { id: string; full_name?: string; email?: string };
+  has_quiz: boolean;
+  is_done: boolean;
+  actual_date?: string;
+  created_at: string;
+}
+
+export interface DoctrineEnrollment {
+  id: string;
+  course_id: string;
+  course?: DoctrineCourse;
+  profile_id: string;
+  profile?: { id: string; full_name?: string; email?: string };
+  enrolled_at: string;
+  completed_at?: string;
+  status: 'active' | 'completed' | 'dropped';
+  notes?: string;
+}
+
+export type DoctrineAttendanceStatus = 'presente' | 'ausente' | 'excusado';
+
+export interface DoctrineAttendance {
+  id: string;
+  lesson_id: string;
+  profile_id: string;
+  profile?: { id: string; full_name?: string; email?: string };
+  status: DoctrineAttendanceStatus;
+  notes?: string;
+  marked_at: string;
+  marked_by?: string;
+}
+
+export const doctrineCourseAPI = {
+  getAll: async (filters?: { is_active?: boolean }): Promise<DoctrineCourse[]> => {
+    let q = supabase
+      .from('doctrine_courses')
+      .select('*, prerequisite:prerequisite_id(id, name)')
+      .order('day_of_week')
+      .order('start_time');
+    if (filters?.is_active !== undefined) q = q.eq('is_active', filters.is_active);
+    const { data, error } = await q;
+    if (error) throw error;
+    return data as DoctrineCourse[];
+  },
+  getById: async (id: string): Promise<DoctrineCourse> => {
+    const { data, error } = await supabase
+      .from('doctrine_courses')
+      .select('*, prerequisite:prerequisite_id(id, name)')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data as DoctrineCourse;
+  },
+  create: async (course: Omit<DoctrineCourse, 'id' | 'created_at' | 'prerequisite'>) => {
+    const { data, error } = await supabase
+      .from('doctrine_courses')
+      .insert(course)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as DoctrineCourse;
+  },
+  update: async (id: string, course: Partial<Omit<DoctrineCourse, 'id' | 'created_at' | 'prerequisite'>>) => {
+    const { data, error } = await supabase
+      .from('doctrine_courses')
+      .update({ ...course, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as DoctrineCourse;
+  },
+  delete: async (id: string) => {
+    const { error } = await supabase.from('doctrine_courses').delete().eq('id', id);
+    if (error) throw error;
+  },
+};
+
+export const doctrineLessonAPI = {
+  getAll: async (filters?: { course_id?: string; date_from?: string; date_to?: string; is_done?: boolean }): Promise<DoctrineLesson[]> => {
+    let q = supabase
+      .from('doctrine_lessons')
+      .select('*, course:course_id(id, name, day_of_week), teacher:teacher_id(id, full_name, email)')
+      .order('planned_date', { ascending: true });
+    if (filters?.course_id) q = q.eq('course_id', filters.course_id);
+    if (filters?.date_from)  q = q.gte('planned_date', filters.date_from);
+    if (filters?.date_to)    q = q.lte('planned_date', filters.date_to);
+    if (filters?.is_done !== undefined) q = q.eq('is_done', filters.is_done);
+    const { data, error } = await q;
+    if (error) throw error;
+    return data as DoctrineLesson[];
+  },
+  create: async (lesson: Omit<DoctrineLesson, 'id' | 'created_at' | 'course' | 'teacher' | 'is_done' | 'actual_date'>) => {
+    const { data, error } = await supabase
+      .from('doctrine_lessons')
+      .insert({ ...lesson, is_done: false })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as DoctrineLesson;
+  },
+  update: async (id: string, lesson: Partial<Omit<DoctrineLesson, 'id' | 'created_at' | 'course' | 'teacher'>>) => {
+    const { data, error } = await supabase
+      .from('doctrine_lessons')
+      .update({ ...lesson, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as DoctrineLesson;
+  },
+  delete: async (id: string) => {
+    const { error } = await supabase.from('doctrine_lessons').delete().eq('id', id);
+    if (error) throw error;
+  },
+};
+
+export const doctrineEnrollmentAPI = {
+  getByCourse: async (courseId: string): Promise<DoctrineEnrollment[]> => {
+    const { data, error } = await supabase
+      .from('doctrine_enrollments')
+      .select('*, profile:profile_id(id, full_name, email), course:course_id(id, name, day_of_week, start_time, end_time)')
+      .eq('course_id', courseId);
+    if (error) throw error;
+    return data as DoctrineEnrollment[];
+  },
+  getByProfile: async (profileId: string): Promise<DoctrineEnrollment[]> => {
+    const { data, error } = await supabase
+      .from('doctrine_enrollments')
+      .select('*, course:course_id(*)')
+      .eq('profile_id', profileId);
+    if (error) throw error;
+    return data as DoctrineEnrollment[];
+  },
+  enroll: async (courseId: string, profileId: string) => {
+    const { data, error } = await supabase
+      .from('doctrine_enrollments')
+      .insert({ course_id: courseId, profile_id: profileId })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as DoctrineEnrollment;
+  },
+  unenroll: async (id: string) => {
+    const { error } = await supabase.from('doctrine_enrollments').delete().eq('id', id);
+    if (error) throw error;
+  },
+  updateStatus: async (id: string, status: DoctrineEnrollment['status']) => {
+    const update: any = { status };
+    if (status === 'completed') update.completed_at = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('doctrine_enrollments')
+      .update(update)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as DoctrineEnrollment;
+  },
+};
+
+export const doctrineAttendanceAPI = {
+  getByLesson: async (lessonId: string): Promise<DoctrineAttendance[]> => {
+    const { data, error } = await supabase
+      .from('doctrine_attendance')
+      .select('*, profile:profile_id(id, full_name, email)')
+      .eq('lesson_id', lessonId);
+    if (error) throw error;
+    return data as DoctrineAttendance[];
+  },
+  mark: async (lessonId: string, profileId: string, status: DoctrineAttendanceStatus, notes?: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data, error } = await supabase
+      .from('doctrine_attendance')
+      .upsert({
+        lesson_id: lessonId,
+        profile_id: profileId,
+        status,
+        notes,
+        marked_at: new Date().toISOString(),
+        marked_by: user?.id,
+      }, { onConflict: 'lesson_id,profile_id' })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as DoctrineAttendance;
+  },
+  remove: async (lessonId: string, profileId: string) => {
+    const { error } = await supabase
+      .from('doctrine_attendance')
+      .delete()
+      .eq('lesson_id', lessonId)
+      .eq('profile_id', profileId);
+    if (error) throw error;
+  },
+};
+
+// ============================================
 // CALENDAR EVENTS API
 // ============================================
 
@@ -1395,5 +1621,9 @@ export default {
   appSettingsAPI,
   whatsappLogAPI,
   calendarAPI,
+  doctrineCourseAPI,
+  doctrineLessonAPI,
+  doctrineEnrollmentAPI,
+  doctrineAttendanceAPI,
 };
 
