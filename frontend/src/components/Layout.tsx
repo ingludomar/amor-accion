@@ -8,7 +8,7 @@ import { useInstallPrompt } from '../hooks/useInstallPrompt';
 import {
   LogOut, School, Building2, Users, ClipboardList, BarChart3,
   BookOpen, Menu, X, UserCircle, Settings, UserCheck, ShieldCheck, MessageSquare,
-  Download, Calendar,
+  Download, Calendar, BookMarked, GraduationCap,
 } from 'lucide-react';
 
 interface LayoutProps { children: ReactNode; }
@@ -35,6 +35,9 @@ export default function Layout({ children }: LayoutProps) {
   const roles       = usePermission('roles');
   const suggestions = usePermission('suggestions');
   const calendar    = usePermission('calendar');
+  const doctrineCourses     = usePermission('doctrine_courses');
+  const doctrineLessons     = usePermission('doctrine_lessons');
+  const doctrineEnrollments = usePermission('doctrine_enrollments');
 
   useEffect(() => { setLogoUrl(getLogoUrl()); }, []);
 
@@ -47,6 +50,9 @@ export default function Layout({ children }: LayoutProps) {
     { name: 'Temas',         href: '/topics',     icon: BookOpen,     show: topics.canView },
     { name: 'Asistencia',    href: '/attendance', icon: ClipboardList,show: attendance.canView },
     { name: 'Calendario',    href: '/calendar',   icon: Calendar,     show: calendar.canView },
+    { name: 'Cursos doctrina',     href: '/doctrine/courses',     icon: BookMarked,    show: doctrineCourses.canView },
+    { name: 'Lecciones doctrina',  href: '/doctrine/lessons',     icon: BookOpen,      show: doctrineLessons.canView },
+    { name: 'Inscripciones',       href: '/doctrine/enrollments', icon: GraduationCap, show: doctrineEnrollments.canView },
     { name: 'Reportes',      href: '/reports',    icon: BarChart3,    show: reports.canView },
     { name: 'Sedes',         href: '/campuses',   icon: Building2,    show: campuses.canView },
     { name: 'Usuarios',      href: '/users',      icon: UserCheck,    show: users.canView },

@@ -18,6 +18,9 @@ import Settings from './pages/Settings';
 import Roles from './pages/Roles';
 import Suggestions from './pages/Suggestions';
 import CalendarPage from './pages/Calendar';
+import DoctrineCourses from './pages/DoctrineCourses';
+import DoctrineLessons from './pages/DoctrineLessons';
+import DoctrineEnrollments from './pages/DoctrineEnrollments';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Create a client
@@ -140,6 +143,31 @@ function App() {
             element={
               <ProtectedRoute module="calendar">
                 <CalendarPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/doctrine/courses"
+            element={
+              <ProtectedRoute module="doctrine_courses">
+                <DoctrineCourses />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctrine/lessons"
+            element={
+              <ProtectedRoute module="doctrine_lessons">
+                <DoctrineLessons />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctrine/enrollments"
+            element={
+              <ProtectedRoute module="doctrine_enrollments">
+                <DoctrineEnrollments />
               </ProtectedRoute>
             }
           />
